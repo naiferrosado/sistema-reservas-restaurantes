@@ -1,0 +1,297 @@
+@model SistemaReservas.ViewModels.RestaurantCatalogViewModel
+@{
+    ViewData["Title"] = "Explorar Restaurantes";
+    var selected = Model.SelectedRestaurant;
+}
+
+<!-- ENCABEZADO DE PÁGINA -->
+<div class="page-header">
+    <div class="page-header-inner">
+        <div>
+            <h1 class="page-title">Restaurantes</h1>
+            <p class="page-description">Explora nuestra selección de restaurantes gourmet y realiza tu reserva en línea.</p>
+        </div>
+    </div>
+</div>
+
+<div class="page-container" style="padding-top: 0;">
+
+    @if (!Model.Restaurants.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+                </svg>
+            </div>
+            <p class="empty-state-title">Sin restaurantes disponibles</p>
+            <p class="empty-state-description">La base de datos no contiene restaurantes aún. Ejecuta el sistema para inicializar los datos.</p>
+        </div>
+    }
+    else
+    {
+        <!-- SELECTOR DE RESTAURANTES -->
+        <div class="restaurant-selector">
+            @foreach (var r in Model.Restaurants)
+            {
+                <a asp-controller="Home" asp-action="Index"
+                   asp-route-restaurantId="@r.Id"
+                   asp-route-tab="@Model.ActiveTab"
+                   class="restaurant-selector-btn @(r.Id == Model.SelectedRestaurantId ? "active" : "")">
+                    @r.Name
+                </a>
+            }
+        </div>
+
+        @if (selected != null)
+        {
+            <!-- TARJETA HERO DEL RESTAURANTE -->
+            <div class="restaurant-hero">
+                <img src="@selected.ImageUrl"
+                     alt="@selected.Name"
+                     class="restaurant-hero-image"
+                     onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80'" />
+                <div class="restaurant-hero-body">
+                    <div>
+                        <div class="restaurant-hero-header">
+                            <h2 class="restaurant-hero-name">@selected.Name</h2>
+                            <div class="restaurant-hero-cuisine">@selected.CuisineType</div>
+                        </div>
+                        <p class="restaurant-hero-description">@selected.Description</p>
+                        <div class="restaurant-info-grid">
+                            <div class="restaurant-info-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                                </svg>
+                                <div>
+                                    <div class="restaurant-info-label">Dirección</div>
+                                    <div class="restaurant-info-value">@selected.Address</div>
+                                </div>
+                            </div>
+                            <div class="restaurant-info-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                                <div>
+                                    <div class="restaurant-info-label">Teléfono</div>
+                                    <div class="restaurant-info-value">@selected.Phone</div>
+                                </div>
+                            </div>
+                            <div class="restaurant-info-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <div>
+                                    <div class="restaurant-info-label">Horario</div>
+                                    <div class="restaurant-info-value">@selected.OpeningTime — @selected.ClosingTime</div>
+                                </div>
+                            </div>
+                            <div class="restaurant-info-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                <div>
+                                    <div class="restaurant-info-label">Capacidad total</div>
+                                    <div class="restaurant-info-value">@selected.TotalCapacity comensales</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="restaurant-hero-footer">
+                        <div class="rating-display">
+                            <span class="rating-value">@selected.Rating.ToString("F1")</span>
+                            <span class="rating-max">/ 5.0</span>
+                            <div class="rating-stars">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="@(i <= Math.Round(selected.Rating) ? "#F59E0B" : "none")" stroke="#F59E0B" stroke-width="1.75">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                    </svg>
+                                }
+                            </div>
+                            <span class="menu-tag">@selected.PriceRange</span>
+                        </div>
+                        <a asp-controller="Reservations" asp-action="Create"
+                           asp-route-restaurantId="@selected.Id"
+                           class="btn btn-primary">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            Reservar Mesa
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑAS SECUNDARIAS: Carta / Mesas -->
+            <div class="tab-nav">
+                <a asp-controller="Home" asp-action="Index"
+                   asp-route-restaurantId="@Model.SelectedRestaurantId"
+                   asp-route-tab="menu"
+                   class="tab-link @(Model.ActiveTab == "menu" ? "active" : "")">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Carta Gastronómica
+                </a>
+                <a asp-controller="Home" asp-action="Index"
+                   asp-route-restaurantId="@Model.SelectedRestaurantId"
+                   asp-route-tab="tables"
+                   class="tab-link @(Model.ActiveTab == "tables" ? "active" : "")">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    Distribución de Mesas y Areas
+                </a>
+            </div>
+
+            @if (Model.ActiveTab == "menu")
+            {
+                <!-- PESTAÑA: CARTA GASTRONÓMICA -->
+                @if (!Model.MenuByCategory.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            </svg>
+                        </div>
+                        <p class="empty-state-title">Carta no disponible</p>
+                        <p class="empty-state-description">Este restaurante aún no tiene platillos registrados.</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- FILTROS DE CATEGORÍA -->
+                    @if (Model.Categories.Count > 1)
+                    {
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;">
+                            <button data-category-filter="all"
+                                    class="menu-tag @(string.IsNullOrEmpty(Model.ActiveCategory) ? "active" : "")"
+                                    style="cursor:pointer; height:30px; padding:0 14px; font-size:12.5px; font-weight:600; border:1px solid var(--border-medium); border-radius:99px; background:@(string.IsNullOrEmpty(Model.ActiveCategory) ? "var(--brand-primary)" : "var(--bg-page)"); color:@(string.IsNullOrEmpty(Model.ActiveCategory) ? "#fff" : "var(--text-secondary)")">
+                                Todos
+                            </button>
+                            @foreach (var cat in Model.Categories)
+                            {
+                                <a asp-controller="Home" asp-action="Index"
+                                   asp-route-restaurantId="@Model.SelectedRestaurantId"
+                                   asp-route-tab="menu"
+                                   asp-route-category="@cat"
+                                   class="menu-tag"
+                                   style="height:30px; padding:0 14px; display:inline-flex; align-items:center; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid @(Model.ActiveCategory == cat ? "var(--brand-primary)" : "var(--border-medium)"); background:@(Model.ActiveCategory == cat ? "var(--brand-primary)" : "var(--bg-page)"); color:@(Model.ActiveCategory == cat ? "#fff" : "var(--text-secondary)"); border-radius:99px;">
+                                    @cat
+                                </a>
+                            }
+                        </div>
+                    }
+
+                    @foreach (var categoryGroup in Model.MenuByCategory)
+                    {
+                        <div data-menu-category="@categoryGroup.Key" style="margin-bottom:32px;">
+                            <h3 style="font-size:13px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+                                @categoryGroup.Key
+                                <span style="display:inline-block; height:1px; flex:1; background:var(--border-subtle);"></span>
+                            </h3>
+                            <div class="menu-grid">
+                                @foreach (var item in categoryGroup.Value)
+                                {
+                                    <div class="menu-card">
+                                        <img src="@item.ImageUrl"
+                                             alt="@item.Name"
+                                             class="menu-card-image"
+                                             loading="lazy"
+                                             onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'" />
+                                        <div class="menu-card-body">
+                                            <div class="menu-card-category">@item.Category</div>
+                                            <div class="menu-card-name">@item.Name</div>
+                                            <div class="menu-card-description">@item.Description</div>
+                                            <div class="menu-card-footer">
+                                                <div class="menu-card-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("es-ES"))</div>
+                                                @if (!string.IsNullOrWhiteSpace(item.Tags))
+                                                {
+                                                    <div class="menu-card-tags">
+                                                        @foreach (var tag in item.Tags.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)))
+                                                        {
+                                                            <span class="menu-tag">@tag</span>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <!-- PESTAÑA: DISTRIBUCIÓN DE MESAS -->
+                @if (!Model.TablesByZone.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            </svg>
+                        </div>
+                        <p class="empty-state-title">Sin mesas configuradas</p>
+                        <p class="empty-state-description">Este restaurante no tiene mesas registradas.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="floor-plan-zones">
+                        @foreach (var zone in Model.TablesByZone)
+                        {
+                            var availableCount = zone.Value.Count(t => t.Status == "Disponible");
+                            <div class="floor-plan-zone">
+                                <div class="floor-plan-zone-header">
+                                    <span class="floor-plan-zone-title">@zone.Key</span>
+                                    <span class="floor-plan-zone-meta">@availableCount de @zone.Value.Count mesas disponibles</span>
+                                </div>
+                                <div class="floor-plan-tables-grid">
+                                    @foreach (var table in zone.Value)
+                                    {
+                                        var statusClass = table.Status switch
+                                        {
+                                            "Disponible" => "table-card--available",
+                                            "Reservada" => "table-card--reserved",
+                                            "Ocupada" => "table-card--occupied",
+                                            _ => ""
+                                        };
+                                        <div class="table-card @statusClass" style="cursor:default;">
+                                            <div class="table-card-number">@table.TableNumber</div>
+                                            <div class="table-card-capacity">@table.Capacity personas</div>
+                                            <div class="table-card-status">
+                                                <span class="table-status-indicator"></span>
+                                                <span>@table.Status</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Leyenda -->
+                    <div style="display:flex; gap:20px; margin-top:20px; padding:14px 0; border-top:1px solid var(--border-subtle);">
+                        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-available-text); display:inline-block;"></span>
+                            Disponible
+                        </span>
+                        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-reserved-text); display:inline-block;"></span>
+                            Reservada
+                        </span>
+                        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-occupied-text); display:inline-block;"></span>
+                            Ocupada
+                        </span>
+                    </div>
+                }
+            }
+        }
+    }
+</div>

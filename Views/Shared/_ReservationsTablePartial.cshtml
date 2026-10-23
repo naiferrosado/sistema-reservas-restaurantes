@@ -1,0 +1,149 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+
+<div class="card">
+    <!-- BARRA DE FILTROS -->
+    <form asp-controller="Dashboard" asp-action="Index" method="get" class="toolbar">
+        <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+        <input type="hidden" name="tab" value="reservations" />
+
+        <div class="toolbar-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input name="filterSearch" value="@Model.FilterSearch"
+                   class="form-control" placeholder="Buscar por nombre, correo o codigo..." />
+        </div>
+
+        <div class="toolbar-filters">
+            <select name="filterStatus" class="form-control form-select" style="width:160px;">
+                <option value="Todos" @(Model.FilterStatus == null || Model.FilterStatus == "Todos" ? "selected" : "")>Todos los estados</option>
+                <option value="Pendiente" @(Model.FilterStatus == "Pendiente" ? "selected" : "")>Pendiente</option>
+                <option value="Aprobada" @(Model.FilterStatus == "Aprobada" ? "selected" : "")>Aprobada</option>
+                <option value="Confirmada" @(Model.FilterStatus == "Confirmada" ? "selected" : "")>Confirmada</option>
+                <option value="Rechazada" @(Model.FilterStatus == "Rechazada" ? "selected" : "")>Rechazada</option>
+                <option value="Cancelada" @(Model.FilterStatus == "Cancelada" ? "selected" : "")>Cancelada</option>
+            </select>
+
+            <input name="filterDate" type="date" class="form-control"
+                   value="@Model.FilterDate?.ToString("yyyy-MM-dd")"
+                   style="width:160px;" />
+
+            <button type="submit" class="btn btn-secondary btn-sm">Filtrar</button>
+
+            @if (!string.IsNullOrEmpty(Model.FilterSearch) || !string.IsNullOrEmpty(Model.FilterStatus) || Model.FilterDate.HasValue)
+            {
+                <a asp-controller="Dashboard" asp-action="Index"
+                   asp-route-restaurantId="@Model.SelectedRestaurantId"
+                   asp-route-tab="reservations"
+                   class="btn btn-ghost btn-sm" style="color:var(--text-muted);">Limpiar</a>
+            }
+        </div>
+    </form>
+
+    <!-- TABLA DE RESERVAS -->
+    @if (!Model.Reservations.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            </div>
+            <p class="empty-state-title">Sin reservas</p>
+            <p class="empty-state-description">No hay reservas que coincidan con los filtros aplicados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrapper" style="border:none; border-radius:0;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Personas</th>
+                        <th>Mesa</th>
+                        <th>Estado</th>
+                        <th style="text-align:right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var res in Model.Reservations)
+                    {
+                        var statusClass = res.Status switch
+                        {
+                            "Aprobada" or "Confirmada" => "badge--aprobada",
+                            "Pendiente" => "badge--pendiente",
+                            "Rechazada" => "badge--rechazada",
+                            _ => "badge--pendiente"
+                        };
+                        <tr>
+                            <td>
+                                <span class="font-mono" style="font-size:13px; font-weight:600; color:var(--brand-primary);">@res.ReservationCode</span>
+                            </td>
+                            <td>
+                                <div style="font-weight:600; color:var(--text-primary); font-size:13.5px;">@res.CustomerName</div>
+                                <div style="font-size:12px; color:var(--text-muted);">@res.CustomerEmail</div>
+                            </td>
+                            <td style="white-space:nowrap; font-size:13.5px;">@res.ReservationDate.ToString("dd/MM/yyyy")</td>
+                            <td style="white-space:nowrap; font-size:13.5px; font-weight:600;">@res.ReservationTime</td>
+                            <td style="font-size:13.5px; text-align:center;">@res.PartySize</td>
+                            <td style="font-size:13px; color:var(--text-secondary);">
+                                @if (res.Table != null)
+                                {
+                                    <span>Mesa @res.Table.TableNumber</span>
+                                    <span style="font-size:12px; color:var(--text-muted); display:block;">@res.Table.Location</span>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--text-muted);">—</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @statusClass">
+                                    <span class="status-dot"></span>
+                                    @res.Status
+                                </span>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    @if (res.Status == "Pendiente")
+                                    {
+                                        <!-- Aprobar -->
+                                        <form asp-controller="Dashboard" asp-action="ApproveReservation" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@res.Id" />
+                                            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                            <button type="submit" class="btn btn-success btn-xs"
+                                                    onclick="return confirm('Aprobar la reserva @res.ReservationCode de @res.CustomerName?')">
+                                                Aprobar
+                                            </button>
+                                        </form>
+
+                                        <!-- Rechazar -->
+                                        <button class="btn btn-danger-outline btn-xs"
+                                                data-modal-open="modal-reject"
+                                                data-reservation-id="@res.Id"
+                                                data-reservation-code="@res.ReservationCode">
+                                            Rechazar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:12px; color:var(--text-muted);">—</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div style="padding:12px 20px; background:var(--bg-surface); border-top:1px solid var(--border-subtle); font-size:12.5px; color:var(--text-muted);">
+            @Model.Reservations.Count resultado@(Model.Reservations.Count != 1 ? "s" : "")
+        </div>
+    }
+</div>

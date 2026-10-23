@@ -1,0 +1,106 @@
+@model SistemaReservas.ViewModels.ReservationConfirmationViewModel
+@{
+    ViewData["Title"] = "Reserva Registrada";
+    var res = Model.Reservation;
+    var restaurant = Model.Restaurant;
+    var table = Model.Table;
+}
+
+<div class="page-container" style="max-width:620px; padding-top:40px; padding-bottom:60px;">
+
+    <div class="confirmation-card">
+
+        <!-- Cabecera -->
+        <div class="confirmation-header">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <h1>Solicitud Registrada</h1>
+            <p>Tu reserva ha sido recibida y está pendiente de aprobación</p>
+        </div>
+
+        <div class="card-body">
+
+            <!-- Código de Reserva -->
+            <div class="confirmation-code-box">
+                <div class="confirmation-code-label">Codigo de Reserva</div>
+                <div class="confirmation-code-value">@res.ReservationCode</div>
+            </div>
+
+            <!-- Aviso de estado -->
+            <div class="confirmation-notice">
+                <strong>Estado actual: Pendiente de aprobacion.</strong><br/>
+                El equipo del restaurante revisara tu solicitud y te notificara por correo electronico a <strong>@res.CustomerEmail</strong> con la confirmacion o, en caso de no disponibilidad, el motivo de rechazo.
+            </div>
+
+            <!-- Detalles de la reserva -->
+            <div style="margin-bottom:20px;">
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Restaurante</span>
+                    <span class="confirmation-detail-value">@(restaurant?.Name ?? "—")</span>
+                </div>
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Cliente</span>
+                    <span class="confirmation-detail-value">@res.CustomerName</span>
+                </div>
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Fecha</span>
+                    <span class="confirmation-detail-value">
+                        @res.ReservationDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))
+                    </span>
+                </div>
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Hora</span>
+                    <span class="confirmation-detail-value">@res.ReservationTime hrs</span>
+                </div>
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Comensales</span>
+                    <span class="confirmation-detail-value">@res.PartySize @(res.PartySize == 1 ? "persona" : "personas")</span>
+                </div>
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Mesa asignada</span>
+                    <span class="confirmation-detail-value">
+                        @if (table != null)
+                        {
+                            <span>Mesa @table.TableNumber — @table.Location (@table.Capacity personas)</span>
+                        }
+                        else
+                        {
+                            <span>Se asignara al confirmar</span>
+                        }
+                    </span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(res.SpecialRequests))
+                {
+                    <div class="confirmation-detail-row">
+                        <span class="confirmation-detail-label">Peticiones especiales</span>
+                        <span class="confirmation-detail-value" style="max-width:60%; text-align:right;">@res.SpecialRequests</span>
+                    </div>
+                }
+                <div class="confirmation-detail-row">
+                    <span class="confirmation-detail-label">Estado</span>
+                    <span class="confirmation-detail-value">
+                        <span class="badge badge--pendiente">
+                            <span class="status-dot"></span>
+                            Pendiente de aprobacion
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <a asp-controller="Reservations" asp-action="Lookup"
+                   asp-route-SearchCode="@res.ReservationCode"
+                   class="btn btn-primary" style="width:100%; justify-content:center;">
+                    Consultar Estado de Reserva
+                </a>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-secondary" style="width:100%; justify-content:center;">
+                    Volver al Inicio
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+</div>

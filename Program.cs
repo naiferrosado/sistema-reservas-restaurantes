@@ -17,14 +17,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Inyección de dependencias
 builder.Services.AddScoped<IEmailService, EmailService>();
 
-// Controladores con soporte JSON sin ciclos de referencia
-builder.Services.AddControllers()
+// MVC con Vistas Razor + soporte JSON para controladores API
+builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// Configuración de CORS para permitir consumo desde cualquier origen
+// Configuración de CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -37,7 +37,10 @@ builder.Services.AddCors(options =>
 
 // Swagger / OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "SistemaReservas API", Version = "v1" });
+});
 
 var app = builder.Build();
 
@@ -57,7 +60,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Configurar Swagger UI siempre accesible para pruebas
+// Swagger UI siempre accesible
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -67,17 +70,19 @@ app.UseSwaggerUI(c =>
 
 app.UseCors("AllowAll");
 
-// Servir archivos estáticos del frontend (HTML, CSS, JS) desde wwwroot
-app.UseDefaultFiles();
+// Archivos estáticos (CSS, JS, imágenes)
 app.UseStaticFiles();
 
 app.UseRouting();
 
 app.UseAuthorization();
 
-app.MapControllers();
+// Ruta MVC convencional como ruta principal — HomeController.Index() sirve /
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Fallback a index.html para soportar navegación SPA
-app.MapFallbackToFile("index.html");
+// Mantener rutas API para compatibilidad Swagger
+app.MapControllers();
 
 app.Run();

@@ -1,0 +1,103 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Carta del Restaurante</div>
+            <div class="card-subtitle">@Model.MenuItems.Count platillos registrados &mdash; @Model.MenuByCategory.Count categorias</div>
+        </div>
+    </div>
+
+    @if (!Model.MenuByCategory.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                </svg>
+            </div>
+            <p class="empty-state-title">Carta vacia</p>
+            <p class="empty-state-description">No hay platillos registrados para este restaurante. Utiliza la API para agregar items al menu.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var categoryGroup in Model.MenuByCategory)
+        {
+            <div style="border-bottom:1px solid var(--border-subtle);">
+                <div style="padding:10px 20px; background:var(--bg-surface);">
+                    <span style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">@categoryGroup.Key</span>
+                </div>
+                <div class="table-wrapper" style="border:none; border-radius:0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Platillo</th>
+                                <th>Descripcion</th>
+                                <th>Precio</th>
+                                <th>Etiquetas</th>
+                                <th>Disponible</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in categoryGroup.Value)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <img src="@item.ImageUrl" alt="@item.Name"
+                                                 style="width:40px; height:40px; border-radius:6px; object-fit:cover; background:var(--bg-surface);"
+                                                 onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=80&q=60'" />
+                                            <span style="font-weight:600; font-size:13.5px; color:var(--text-primary);">@item.Name</span>
+                                        </div>
+                                    </td>
+                                    <td style="max-width:260px;">
+                                        <span style="font-size:13px; color:var(--text-secondary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">@item.Description</span>
+                                    </td>
+                                    <td style="white-space:nowrap; font-weight:700; color:var(--brand-accent); font-size:14px;">
+                                        @item.Price.ToString("C", new System.Globalization.CultureInfo("es-ES"))
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Tags))
+                                        {
+                                            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                                @foreach (var tag in item.Tags.Split(',').Select(t => t.Trim()).Where(t => !string.IsNullOrEmpty(t)))
+                                                {
+                                                    <span class="menu-tag">@tag</span>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--text-muted); font-size:13px;">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.IsAvailable)
+                                        {
+                                            <span class="badge badge--aprobada">
+                                                <span class="status-dot"></span>
+                                                Disponible
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge--rechazada">
+                                                <span class="status-dot"></span>
+                                                No disponible
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <div style="padding:12px 20px; background:var(--bg-surface); font-size:12.5px; color:var(--text-muted);">
+            Gestiona los platillos utilizando los endpoints API en <a href="/swagger" target="_blank" style="color:var(--brand-primary); font-weight:600;">/swagger</a>
+        </div>
+    }
+</div>

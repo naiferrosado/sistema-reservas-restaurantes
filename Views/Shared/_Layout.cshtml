@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Plataforma integral de reservas para restaurantes gourmet. Gestiona tu mesa en La Terraza Gourmet, Trattoria Don Corleone y Sakura Izakaya." />
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — SistemaReservas" : "SistemaReservas — Gestión Gastronómica")</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+</head>
+<body>
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR FIJA -->
+    <header class="navbar">
+        <div class="navbar-inner">
+            <!-- Logo -->
+            <a asp-controller="Home" asp-action="Index" class="navbar-brand">
+                <div class="brand-mark">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">SistemaReservas</span>
+                    <span class="brand-tagline">Gestión Gastronómica</span>
+                </div>
+            </a>
+
+            <!-- Navegación Central -->
+            <nav class="navbar-nav">
+                @{
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+                }
+                <a asp-controller="Home" asp-action="Index"
+                   class="nav-link @(currentController == "Home" ? "nav-link--active" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    Explorar Restaurantes
+                </a>
+                <a asp-controller="Reservations" asp-action="Lookup"
+                   class="nav-link @(currentController == "Reservations" && currentAction == "Lookup" ? "nav-link--active" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    Consultar Reserva
+                </a>
+                <a asp-controller="Dashboard" asp-action="Index"
+                   class="nav-link @(currentController == "Dashboard" ? "nav-link--active" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                    Panel Administrativo
+                </a>
+            </nav>
+
+            <!-- Botón CTA Derecha -->
+            <div class="navbar-actions">
+                <a asp-controller="Reservations" asp-action="Create" class="btn btn-primary btn-sm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"/><path d="M12 5v14"/>
+                    </svg>
+                    Reservar Mesa
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="main-content">
+        <!-- Notificaciones Toast -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="toast toast--success" id="toast-success">
+                <div class="toast-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+                <span class="toast-message">@TempData["SuccessMessage"]</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="toast toast--error" id="toast-error">
+                <div class="toast-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/>
+                    </svg>
+                </div>
+                <span class="toast-message">@TempData["ErrorMessage"]</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        }
+
+        @RenderBody()
+    </main>
+
+    <!-- PIE DE PÁGINA CORPORATIVO -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <span class="footer-brand-name">SistemaReservas</span>
+                <span class="footer-tagline">Plataforma Integral de Gestión Gastronómica</span>
+            </div>
+            <div class="footer-links">
+                <a asp-controller="Home" asp-action="Index">Restaurantes</a>
+                <a asp-controller="Reservations" asp-action="Lookup">Consultar Reserva</a>
+                <a asp-controller="Dashboard" asp-action="Index">Panel Admin</a>
+                <a href="/swagger" target="_blank">API Docs</a>
+            </div>
+            <div class="footer-copy">
+                <span>&copy; @DateTime.Now.Year SistemaReservas. Todos los derechos reservados.</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/js/app.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,178 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Panel Administrativo";
+}
+
+<div class="page-header">
+    <div class="page-header-inner">
+        <div>
+            <h1 class="page-title">Panel Administrativo</h1>
+            <p class="page-description">
+                @if (Model.SelectedRestaurant != null)
+                {
+                    <span>@Model.SelectedRestaurant.Name &mdash; Gestion integral de reservas y operaciones</span>
+                }
+            </p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            @foreach (var r in Model.Restaurants)
+            {
+                <a asp-controller="Dashboard" asp-action="Index"
+                   asp-route-restaurantId="@r.Id"
+                   asp-route-tab="@Model.ActiveTab"
+                   style="padding:6px 14px; border-radius:6px; font-size:13px; font-weight:@(r.Id == Model.SelectedRestaurantId ? "700" : "500"); border:1px solid @(r.Id == Model.SelectedRestaurantId ? "var(--brand-primary)" : "var(--border-medium)"); color:@(r.Id == Model.SelectedRestaurantId ? "var(--brand-primary)" : "var(--text-secondary)"); background:@(r.Id == Model.SelectedRestaurantId ? "var(--bg-surface)" : "transparent");">
+                    @r.Name
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="page-container" style="padding-top:0;">
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Reservas del Dia</div>
+            <div class="kpi-value primary" id="kpi-reservations">@Model.TotalReservationsToday</div>
+            <div class="kpi-meta">
+                @Model.ConfirmedCount aprobadas &bull; @Model.PendingCount pendientes
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Comensales Esperados</div>
+            <div class="kpi-value" id="kpi-guests">@Model.ExpectedGuestsToday</div>
+            <div class="kpi-meta">Personas hoy en el restaurante</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Ocupacion en Sala</div>
+            <div class="kpi-value @(Model.OccupancyRate >= 80 ? "accent" : Model.OccupancyRate >= 50 ? "warning" : "success")" id="kpi-occupancy">@Model.OccupancyRate%</div>
+            <div class="kpi-meta">@Model.OccupiedTables de @Model.TotalTables mesas ocupadas</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Solicitudes Pendientes</div>
+            <div class="kpi-value @(Model.PendingCount > 0 ? "warning" : "success")" id="kpi-pending">@Model.PendingCount</div>
+            <div class="kpi-meta">Requieren aprobacion o rechazo</div>
+        </div>
+    </div>
+
+    <!-- SUB-NAVEGACION DE PESTANAS -->
+    <div class="tab-nav">
+        <a asp-controller="Dashboard" asp-action="Index"
+           asp-route-restaurantId="@Model.SelectedRestaurantId"
+           asp-route-tab="reservations"
+           class="tab-link @(Model.ActiveTab == "reservations" ? "active" : "")">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Gestion de Reservas
+        </a>
+        <a asp-controller="Dashboard" asp-action="Index"
+           asp-route-restaurantId="@Model.SelectedRestaurantId"
+           asp-route-tab="floorplan"
+           class="tab-link @(Model.ActiveTab == "floorplan" ? "active" : "")">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Plano de Mesas
+        </a>
+        <a asp-controller="Dashboard" asp-action="Index"
+           asp-route-restaurantId="@Model.SelectedRestaurantId"
+           asp-route-tab="inbox"
+           class="tab-link @(Model.ActiveTab == "inbox" ? "active" : "")">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Bandeja de Correos
+            @if (Model.Notifications.Any())
+            {
+                <span style="background:var(--brand-primary); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px; min-width:20px; text-align:center;">@Model.Notifications.Count</span>
+            }
+        </a>
+        <a asp-controller="Dashboard" asp-action="Index"
+           asp-route-restaurantId="@Model.SelectedRestaurantId"
+           asp-route-tab="menu"
+           class="tab-link @(Model.ActiveTab == "menu" ? "active" : "")">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Gestion de Menu
+        </a>
+    </div>
+
+    <!-- CONTENIDO POR PESTANA -->
+    @if (Model.ActiveTab == "reservations")
+    {
+        @await Html.PartialAsync("_ReservationsTablePartial", Model)
+    }
+    else if (Model.ActiveTab == "floorplan")
+    {
+        @await Html.PartialAsync("_FloorPlanPartial", Model)
+    }
+    else if (Model.ActiveTab == "inbox")
+    {
+        @await Html.PartialAsync("_EmailInboxPartial", Model)
+    }
+    else if (Model.ActiveTab == "menu")
+    {
+        @await Html.PartialAsync("_MenuManagementPartial", Model)
+    }
+
+</div>
+
+<!-- MODAL: RECHAZAR RESERVA -->
+<div class="modal-overlay" id="modal-reject">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <span class="modal-title">Rechazar Reserva</span>
+            <button class="modal-close" data-modal-close="modal-reject">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="RejectReservation" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:16px;">
+                    Esta accion notificara al cliente por correo electronico con el motivo proporcionado.
+                    La reserva <strong class="modal-reservation-code font-mono"></strong> quedara como <strong>Rechazada</strong>.
+                </p>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label required">Motivo del rechazo</label>
+                    <textarea name="reason" class="form-control" rows="3"
+                              placeholder="Ej: Aforo completo para el horario solicitado." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-reject">Cancelar</button>
+                <button type="submit" class="btn btn-danger-outline">Confirmar Rechazo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: PREVISUALIZAR CORREO -->
+<div class="modal-overlay" id="modal-email-preview">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <span class="modal-title">Vista previa del correo enviado</span>
+            <button class="modal-close" data-modal-close="modal-email-preview">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+            <iframe id="email-preview-frame" style="width:100%; height:520px; border:none;" title="Vista previa del correo HTML"></iframe>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close="modal-email-preview">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// Inicializar datos de restriccion de restaurante para AJAX de KPIs
+window._dashboardRestaurantId = @Model.SelectedRestaurantId;
+</script>
+}

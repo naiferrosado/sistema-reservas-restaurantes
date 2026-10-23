@@ -1,0 +1,105 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+        <div style="font-size:14px; color:var(--text-secondary);">
+            Haz clic en una mesa para cambiar su estado operativo en tiempo real.
+        </div>
+    </div>
+    <div style="display:flex; gap:16px;">
+        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-available-text); display:inline-block;"></span>
+            Disponible
+        </span>
+        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-reserved-text); display:inline-block;"></span>
+            Reservada
+        </span>
+        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-occupied-text); display:inline-block;"></span>
+            Ocupada
+        </span>
+    </div>
+</div>
+
+@if (!Model.TablesByZone.Any())
+{
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            </svg>
+        </div>
+        <p class="empty-state-title">Sin mesas configuradas</p>
+        <p class="empty-state-description">Este restaurante no tiene mesas registradas en el sistema.</p>
+    </div>
+}
+else
+{
+    <div class="floor-plan-zones">
+        @foreach (var zone in Model.TablesByZone)
+        {
+            var availableCount = zone.Value.Count(t => t.Status == "Disponible");
+            var reservedCount = zone.Value.Count(t => t.Status == "Reservada");
+            var occupiedCount = zone.Value.Count(t => t.Status == "Ocupada");
+
+            <div class="floor-plan-zone">
+                <div class="floor-plan-zone-header">
+                    <span class="floor-plan-zone-title">@zone.Key</span>
+                    <span class="floor-plan-zone-meta">
+                        @availableCount disponibles &bull; @reservedCount reservadas &bull; @occupiedCount ocupadas
+                    </span>
+                </div>
+                <div class="floor-plan-tables-grid">
+                    @foreach (var table in zone.Value)
+                    {
+                        var statusClass = table.Status switch
+                        {
+                            "Disponible" => "table-card--available",
+                            "Reservada"  => "table-card--reserved",
+                            "Ocupada"    => "table-card--occupied",
+                            _            => ""
+                        };
+                        <div class="table-card @statusClass"
+                             data-table-id="@table.Id"
+                             data-status="@table.Status"
+                             title="Clic para cambiar estado — Mesa @table.TableNumber (@table.Location)">
+                            <div class="table-card-number">@table.TableNumber</div>
+                            <div class="table-card-capacity">@table.Capacity personas</div>
+                            <div class="table-card-status">
+                                <span class="table-status-indicator"></span>
+                                <span>@table.Status</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Resumen de ocupacion -->
+    <div style="margin-top:20px; display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+        @{
+            var allTables = Model.TablesByZone.Values.SelectMany(t => t).ToList();
+            var totalCount = allTables.Count;
+            var availableAll = allTables.Count(t => t.Status == "Disponible");
+            var reservedAll = allTables.Count(t => t.Status == "Reservada");
+            var occupiedAll = allTables.Count(t => t.Status == "Ocupada");
+        }
+        <div class="kpi-card" style="text-align:center;">
+            <div class="kpi-label">Disponibles</div>
+            <div class="kpi-value success">@availableAll</div>
+            <div class="kpi-meta">de @totalCount mesas totales</div>
+        </div>
+        <div class="kpi-card" style="text-align:center;">
+            <div class="kpi-label">Reservadas</div>
+            <div class="kpi-value" style="color:var(--status-reserved-text);">@reservedAll</div>
+            <div class="kpi-meta">con reserva asignada</div>
+        </div>
+        <div class="kpi-card" style="text-align:center;">
+            <div class="kpi-label">Ocupadas</div>
+            <div class="kpi-value accent">@occupiedAll</div>
+            <div class="kpi-meta">en uso actualmente</div>
+        </div>
+    </div>
+}
