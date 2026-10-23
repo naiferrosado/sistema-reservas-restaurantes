@@ -142,7 +142,7 @@ namespace SistemaReservas.Data
             var today = DateTime.UtcNow.Date;
             var res1 = new Reservation
             {
-                ReservationCode = "RES-98421",
+                ReservationCode = "RES-1023-9842",
                 RestaurantId = r1.Id,
                 TableId = tablesR1[1].Id, // Mesa 2
                 CustomerName = "Carlos Mendoza",
@@ -151,15 +151,15 @@ namespace SistemaReservas.Data
                 ReservationDate = today,
                 ReservationTime = "20:30",
                 PartySize = 2,
-                SpecialRequests = "Mesa romántica junto a la ventana. Aniversario de bodas.",
+                SpecialRequests = "Mesa junto a la ventana. Aniversario de bodas.",
                 Status = "Confirmada",
-                AdminNotes = "Asignada mesa con las mejores vistas.",
+                AdminNotes = "Asignada mesa con vistas panoramicas.",
                 CreatedAt = today.AddDays(-1).AddHours(14)
             };
 
             var res2 = new Reservation
             {
-                ReservationCode = "RES-87312",
+                ReservationCode = "RES-1023-8731",
                 RestaurantId = r1.Id,
                 TableId = tablesR1[3].Id, // Mesa 4
                 CustomerName = "Elena Navarro",
@@ -168,7 +168,7 @@ namespace SistemaReservas.Data
                 ReservationDate = today,
                 ReservationTime = "14:00",
                 PartySize = 4,
-                SpecialRequests = "Uno de los comensales es celíaco.",
+                SpecialRequests = "Uno de los comensales es celiaco.",
                 Status = "Confirmada",
                 AdminNotes = "Informado al equipo de cocina.",
                 CreatedAt = today.AddDays(-2).AddHours(10)
@@ -176,7 +176,7 @@ namespace SistemaReservas.Data
 
             var res3 = new Reservation
             {
-                ReservationCode = "RES-56190",
+                ReservationCode = "RES-1024-5619",
                 RestaurantId = r1.Id,
                 TableId = tablesR1[4].Id, // Mesa 5
                 CustomerName = "Mariano Soto",
@@ -192,16 +192,16 @@ namespace SistemaReservas.Data
 
             var res4 = new Reservation
             {
-                ReservationCode = "RES-33108",
+                ReservationCode = "RES-1023-3310",
                 RestaurantId = r2.Id,
                 TableId = tablesR2[2].Id,
-                CustomerName = "Sofía Valenzuela",
+                CustomerName = "Sofia Valenzuela",
                 CustomerEmail = "sofia.valenzuela@ejemplo.com",
                 CustomerPhone = "+34 688 901 234",
                 ReservationDate = today,
                 ReservationTime = "21:30",
                 PartySize = 4,
-                SpecialRequests = "Cumpleaños, quisiéramos llevar tarta.",
+                SpecialRequests = "Celebracion familiar.",
                 Status = "Confirmada",
                 CreatedAt = today.AddDays(-1)
             };
@@ -209,21 +209,17 @@ namespace SistemaReservas.Data
             context.Reservations.AddRange(res1, res2, res3, res4);
             context.SaveChanges();
 
-            // Notificaciones de prueba
+            // Notificaciones de prueba con diseno corporativo
             context.Notifications.Add(new NotificationLog
             {
                 ReservationId = res1.Id,
                 RecipientEmail = res1.CustomerEmail,
                 RecipientName = res1.CustomerName,
-                Subject = "¡Reserva Confirmada en La Terraza Gourmet! - Código: RES-98421",
-                BodyHtml = $@"<div style='font-family:sans-serif;padding:20px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;'>
-                    <h2 style='color:#0f172a;'>Confirmación de Reserva</h2>
-                    <p>Hola <strong>{res1.CustomerName}</strong>,</p>
-                    <p>Tu reserva en <strong>La Terraza Gourmet</strong> para el día <strong>{res1.ReservationDate:dd/MM/yyyy}</strong> a las <strong>{res1.ReservationTime}</strong> ha sido aprobada con éxito.</p>
-                    <p><strong>Mesa asignada:</strong> Mesa 2 (Terraza Panorámica) - {res1.PartySize} personas.</p>
-                    <p><strong>Código de Reserva:</strong> <span style='font-size:18px;font-weight:bold;color:#4f46e5;'>RES-98421</span></p>
-                    <p>¡Te esperamos con entusiasmo!</p>
-                </div>",
+                Subject = "Reserva Aprobada en La Terraza Gourmet — Codigo: RES-1023-9842",
+                BodyHtml = $@"<!DOCTYPE html>
+<html lang='es'>
+<head><meta charset='utf-8'/><style>body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px; color: #0F172A; }} .card {{ max-width: 580px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; }} .header {{ background: #1B365D; padding: 28px; text-align: center; color: #FFFFFF; }} .content {{ padding: 28px; }} .code-box {{ text-align: center; border: 2px dashed #CBD5E1; border-radius: 8px; padding: 16px; margin: 20px 0; background: #F8FAFC; }} .code-value {{ font-size: 24px; font-weight: 800; color: #1B365D; letter-spacing: 0.08em; font-family: monospace; }}</style></head>
+<body><div class='card'><div class='header'><div style='font-size:12px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.8;'>La Terraza Gourmet</div><h1 style='font-size:20px;margin:8px 0 0;'>Reserva Confirmada</h1></div><div class='content'><p>Hola, <strong>{res1.CustomerName}</strong></p><p>Tu solicitud de reserva ha sido aprobada con exito.</p><div class='code-box'><div style='font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;'>Codigo Oficial</div><div class='code-value'>RES-1023-9842</div></div><p><strong>Mesa asignada:</strong> Mesa 2 (Terraza Panoramica) &bull; 2 personas</p><p><strong>Fecha y Hora:</strong> {res1.ReservationDate:dd/MM/yyyy} a las {res1.ReservationTime} hrs</p></div></div></body></html>",
                 Status = "Enviado",
                 SentAt = DateTime.UtcNow.AddMinutes(-30)
             });

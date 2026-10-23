@@ -1,0 +1,27 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+
+<!-- KPI CARDS -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Reservas del Dia</div>
+        <div class="kpi-value primary" id="kpi-reservations">@Model.TotalReservationsToday</div>
+        <div class="kpi-meta">
+            @Model.ConfirmedCount aprobadas &bull; @Model.PendingCount pendientes
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Comensales Esperados</div>
+        <div class="kpi-value" id="kpi-guests">@Model.ExpectedGuestsToday</div>
+        <div class="kpi-meta">Personas hoy en el restaurante</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Ocupacion en Sala</div>
+        <div class="kpi-value @(Model.OccupancyRate >= 80 ? "accent" : Model.OccupancyRate >= 50 ? "warning" : "success")" id="kpi-occupancy">@Model.OccupancyRate%</div>
+        <div class="kpi-meta">@Model.OccupiedTables de @Model.TotalTables mesas ocupadas</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Solicitudes Pendientes</div>
+        <div class="kpi-value @(Model.PendingCount > 0 ? "warning" : "success")" id="kpi-pending">@Model.PendingCount</div>
+        <div class="kpi-meta">Requieren aprobacion o rechazo</div>
+    </div>
+</div>

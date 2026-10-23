@@ -16,12 +16,12 @@
 
         <div class="toolbar-filters">
             <select name="filterStatus" class="form-control form-select" style="width:160px;">
-                <option value="Todos" @(Model.FilterStatus == null || Model.FilterStatus == "Todos" ? "selected" : "")>Todos los estados</option>
-                <option value="Pendiente" @(Model.FilterStatus == "Pendiente" ? "selected" : "")>Pendiente</option>
-                <option value="Aprobada" @(Model.FilterStatus == "Aprobada" ? "selected" : "")>Aprobada</option>
-                <option value="Confirmada" @(Model.FilterStatus == "Confirmada" ? "selected" : "")>Confirmada</option>
-                <option value="Rechazada" @(Model.FilterStatus == "Rechazada" ? "selected" : "")>Rechazada</option>
-                <option value="Cancelada" @(Model.FilterStatus == "Cancelada" ? "selected" : "")>Cancelada</option>
+                <option value="Todos" selected="@(Model.FilterStatus == null || Model.FilterStatus == "Todos")">Todos los estados</option>
+                <option value="Pendiente" selected="@(Model.FilterStatus == "Pendiente")">Pendiente</option>
+                <option value="Aprobada" selected="@(Model.FilterStatus == "Aprobada")">Aprobada</option>
+                <option value="Confirmada" selected="@(Model.FilterStatus == "Confirmada")">Confirmada</option>
+                <option value="Rechazada" selected="@(Model.FilterStatus == "Rechazada")">Rechazada</option>
+                <option value="Cancelada" selected="@(Model.FilterStatus == "Cancelada")">Cancelada</option>
             </select>
 
             <input name="filterDate" type="date" class="form-control"

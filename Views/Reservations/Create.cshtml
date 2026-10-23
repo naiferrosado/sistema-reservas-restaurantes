@@ -104,7 +104,7 @@
                         <select asp-for="ReservationTime" class="form-control form-select">
                             @foreach (var slot in Model.TimeSlots)
                             {
-                                <option value="@slot" @(slot == Model.ReservationTime ? "selected" : "")>@slot hrs</option>
+                                <option value="@slot">@slot hrs</option>
                             }
                         </select>
                         <span asp-validation-for="ReservationTime" class="field-validation-error"></span>
@@ -114,7 +114,7 @@
                         <select asp-for="PartySize" class="form-control form-select">
                             @for (int i = 1; i <= 20; i++)
                             {
-                                <option value="@i" @(i == Model.PartySize ? "selected" : "")>@i persona@(i > 1 ? "s" : "")</option>
+                                <option value="@i">@i persona@(i > 1 ? "s" : "")</option>
                             }
                         </select>
                         <span asp-validation-for="PartySize" class="field-validation-error"></span>
