@@ -165,7 +165,6 @@ Abre tu navegador en:
    - Utiliza las credenciales oficiales de demostracion:
      - **Correo:** `admin@sistemareservas.com`
      - **Contrasena:** `Admin123!`
-     *(O presiona el boton "Autocompletar" en pantalla)*.
 5. **Gestion en el Panel Administrativo (`/Dashboard/Index`):**
    - Tras iniciar sesion, se muestra el indicador de usuario activo (`Administrador General`) en la barra superior.
    - Revisa las 4 tarjetas KPI en vivo.

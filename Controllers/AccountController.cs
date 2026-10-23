@@ -35,8 +35,7 @@ namespace SistemaReservas.Controllers
 
             return View(new LoginViewModel
             {
-                ReturnUrl = returnUrl,
-                Email = "admin@sistemareservas.com" // Pre-llenado amigable para facilidad de prueba
+                ReturnUrl = returnUrl
             });
         }
 
