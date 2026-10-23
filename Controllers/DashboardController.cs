@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaReservas.Data;
@@ -7,6 +8,7 @@ using SistemaReservas.ViewModels;
 
 namespace SistemaReservas.Controllers
 {
+    [Authorize]
     public class DashboardController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -234,6 +236,7 @@ namespace SistemaReservas.Controllers
         // ENDPOINT API (para Swagger)
         // ===========================
 
+        [AllowAnonymous]
         [HttpGet]
         [Route("api/dashboard/stats")]
         public async Task<IActionResult> ApiGetStats([FromQuery] int? restaurantId)

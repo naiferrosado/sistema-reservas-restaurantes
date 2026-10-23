@@ -15,6 +15,7 @@ namespace SistemaReservas.Data
         public DbSet<MenuItem> MenuItems => Set<MenuItem>();
         public DbSet<Reservation> Reservations => Set<Reservation>();
         public DbSet<NotificationLog> Notifications => Set<NotificationLog>();
+        public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -67,6 +68,15 @@ namespace SistemaReservas.Data
             modelBuilder.Entity<NotificationLog>(entity =>
             {
                 entity.HasKey(e => e.Id);
+            });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.FullName).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.PasswordHash).IsRequired();
+                entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
             });
         }
     }

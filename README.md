@@ -160,14 +160,23 @@ Abre tu navegador en:
 3. **Consulta de Estado (`/Reservations/Lookup`):**
    - Ingresa el codigo generado o el correo electronico registrado.
    - Observa la tarjeta detallada con el estado de la reserva y sus datos.
-4. **Gestion en el Panel Administrativo (`/Dashboard/Index`):**
+4. **Acceso y Autenticacion Administrativa (`/Account/Login`):**
+   - Al hacer clic en **Panel Administrativo** o intentar acceder directamente a `/Dashboard/Index`, el sistema intercepta la peticion y redirige al formulario corporativo de inicio de sesion.
+   - Utiliza las credenciales oficiales de demostracion:
+     - **Correo:** `admin@sistemareservas.com`
+     - **Contrasena:** `Admin123!`
+     *(O presiona el boton "Autocompletar" en pantalla)*.
+5. **Gestion en el Panel Administrativo (`/Dashboard/Index`):**
+   - Tras iniciar sesion, se muestra el indicador de usuario activo (`Administrador General`) en la barra superior.
    - Revisa las 4 tarjetas KPI en vivo.
    - En la tabla de reservas, aprueba o rechaza con motivo la solicitud creada.
    - Verifica el cambio en el contador y la recepcion en la bandeja de auditoria.
-5. **Plano de Mesas en Vivo (`/Dashboard/Index?tab=floorplan`):**
+6. **Plano de Mesas en Vivo (`/Dashboard/Index?tab=floorplan`):**
    - Haz clic sobre cualquier mesa para alternar su estado en sala. Observa la transicion visual inmediata y la actualizacion de la ocupacion.
-6. **Bandeja de Auditoria de Correos (`/Dashboard/Index?tab=inbox`):**
+7. **Bandeja de Auditoria de Correos (`/Dashboard/Index?tab=inbox`):**
    - Haz clic en cualquier registro para abrir el modal con el correo HTML completo enviado al cliente.
+8. **Cierre de Sesion Seguro (`/Account/Logout`):**
+   - Haz clic en el boton "Salir" en la barra de navegacion superior para cerrar la sesion y retornar a la portada publica.
 
 ---
 
@@ -176,6 +185,7 @@ Abre tu navegador en:
 | Capa | Tecnologia | Caracteristicas |
 | :--- | :--- | :--- |
 | **Patron Arquitectonico** | **ASP.NET Core MVC** | Modelo-Vista-Controlador con enrutamiento convencional `{controller=Home}/{action=Index}/{id?}`. |
+| **Seguridad y Acceso** | **Cookie Authentication** | Control de acceso con atributo `[Authorize]`, hashing seguro de contraseñas y proteccion antiforgery. |
 | **Vistas** | **Razor (.cshtml)** | Fuertemente tipadas con ViewModels, Tag Helpers nativos y vistas parciales modulares. |
 | **API RESTful** | **Web API / Controllers** | Endpoints JSON concurrentes en `/api/*` y Swagger UI en `/swagger`. |
 | **Persistencia** | **PostgreSQL** | Acceso a datos con **Entity Framework Core (`Npgsql`)** y migracion/siembra automatica. |
@@ -194,7 +204,8 @@ sistema-reservas-restaurantes/
 ├── appsettings.example.json         # Plantilla publica de configuracion
 ├── appsettings.json                 # Configuracion local protegida
 ├── Controllers/                     # Controladores MVC y API RESTful
-│   ├── DashboardController.cs       # Panel administrativo, KPIs y aprobacion/rechazo
+│   ├── AccountController.cs         # Autenticacion, login, logout y sesiones
+│   ├── DashboardController.cs       # Panel administrativo protegido con [Authorize]
 │   ├── HomeController.cs            # Catalogo gastronomico y vistas de exploracion
 │   ├── MenuController.cs            # API para gestion de platillos
 │   ├── NotificationsController.cs   # API para consulta de correos enviados
@@ -203,26 +214,30 @@ sistema-reservas-restaurantes/
 │   └── TablesController.cs          # API y toggle en tiempo real de mesas
 ├── Data/                            # Contexto ORM e inicializacion
 │   ├── ApplicationDbContext.cs      # DbContext con configuracion relacional
-│   └── DbInitializer.cs             # Siembra inicial de restaurantes, mesas y cartas
+│   └── DbInitializer.cs             # Siembra inicial de restaurantes, mesas, cartas y usuario admin
 ├── DTOs/                            # Objetos de transferencia para API REST
 ├── Models/                          # Entidades de dominio
 │   ├── MenuItem.cs                  # Platillos de la carta
 │   ├── NotificationLog.cs           # Auditoria de correos electronicos
 │   ├── Reservation.cs               # Reservas y codigos oficiales
 │   ├── Restaurant.cs                # Perfiles de restaurantes
-│   └── RestaurantTable.cs           # Mesas, aforo y ubicacion
+│   ├── RestaurantTable.cs           # Mesas, aforo y ubicacion
+│   └── User.cs                      # Usuarios administradores y credenciales
 ├── Services/                        # Logica de negocio y servicios
 │   ├── EmailService.cs              # Generacion de HTML corporativo y SMTP
 │   └── IEmailService.cs             # Contrato de servicio de correo
 ├── ViewModels/                      # Modelos de vista fuertemente tipados
 │   ├── CreateReservationViewModel.cs
 │   ├── DashboardViewModel.cs
+│   ├── LoginViewModel.cs            # Modelo para formulario de login
 │   ├── ReservationConfirmationViewModel.cs
 │   ├── ReservationLookupViewModel.cs
 │   └── RestaurantCatalogViewModel.cs
 ├── Views/                           # Vistas Razor (.cshtml)
 │   ├── _ViewImports.cshtml          # Importacion de namespaces y Tag Helpers
 │   ├── _ViewStart.cshtml            # Plantilla maestra por defecto
+│   ├── Account/
+│   │   └── Login.cshtml             # Vista de login administrativo
 │   ├── Dashboard/
 │   │   └── Index.cshtml             # Panel administrativo integral
 │   ├── Home/
@@ -243,7 +258,7 @@ sistema-reservas-restaurantes/
 │   │   └── styles.css               # Sistema de diseno corporativo blanco ejecutivo
 │   └── js/
 │       └── app.js                   # Interactividad, modales, toasts y Fetch API
-├── Program.cs                       # Pipeline HTTP, registro MVC y Swagger
+├── Program.cs                       # Pipeline HTTP, autenticacion por cookies, registro MVC y Swagger
 ├── SistemaReservas.csproj           # Archivo de proyecto .NET 10
 └── SistemaReservas.http             # Archivo para pruebas directas HTTP
 ```
@@ -252,5 +267,9 @@ sistema-reservas-restaurantes/
 
 ## Seguridad y Variables de Entorno
 
-- Los archivos `appsettings.json` y `.env` estan protegidos mediante `.gitignore` para evitar filtraciones de contraseñas de bases de datos o credenciales SMTP.
+- **Autenticacion de Administradores:** El panel administrativo (`/Dashboard/*`) requiere sesion activa validada por el atributo `[Authorize]`. Las contraseñas se almacenan mediante el algoritmo de hash oficial de ASP.NET Core (`PasswordHasher<string>`).
+- **Credenciales del Administrador Sembrado:**
+  - **Correo:** `admin@sistemareservas.com`
+  - **Contrasena:** `Admin123!`
+- **Proteccion de Credenciales:** Los archivos `appsettings.json` y `.env` estan protegidos mediante `.gitignore` para evitar filtraciones de contraseñas de bases de datos o credenciales SMTP.
 - Utiliza siempre las plantillas `appsettings.example.json` y `.env.example` para desplegar el proyecto en nuevos entornos de desarrollo o produccion.

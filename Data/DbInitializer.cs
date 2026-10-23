@@ -9,6 +9,40 @@ namespace SistemaReservas.Data
         {
             context.Database.EnsureCreated();
 
+            // Asegurar tabla Users y sembrar administrador inicial
+            try
+            {
+                context.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE IF NOT EXISTS ""Users"" (
+                        ""Id"" SERIAL PRIMARY KEY,
+                        ""Email"" VARCHAR(150) NOT NULL UNIQUE,
+                        ""PasswordHash"" VARCHAR(500) NOT NULL,
+                        ""FullName"" VARCHAR(150) NOT NULL,
+                        ""Role"" VARCHAR(50) NOT NULL,
+                        ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                    );
+                ");
+
+                if (!context.Users.Any())
+                {
+                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
+                    var adminUser = new User
+                    {
+                        Email = "admin@sistemareservas.com",
+                        FullName = "Administrador General",
+                        Role = "Administrador",
+                        PasswordHash = hasher.HashPassword("admin@sistemareservas.com", "Admin123!"),
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.Users.Add(adminUser);
+                    context.SaveChanges();
+                }
+            }
+            catch
+            {
+                // Manejo preventivo si la tabla ya está gestionada
+            }
+
             if (context.Restaurants.Any())
             {
                 return; // Ya fue inicializada
