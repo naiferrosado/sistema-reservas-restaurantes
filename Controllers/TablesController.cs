@@ -53,6 +53,24 @@ namespace SistemaReservas.Controllers
             return Ok(table);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTable(int id, [FromBody] CreateTableDto dto)
+        {
+            var table = await _context.Tables.FindAsync(id);
+            if (table == null)
+                return NotFound(new { message = "Mesa no encontrada" });
+
+            table.TableNumber = dto.TableNumber;
+            table.Capacity = dto.Capacity;
+            table.Location = dto.Location;
+            table.Status = dto.Status;
+            table.PosX = dto.PosX;
+            table.PosY = dto.PosY;
+
+            await _context.SaveChangesAsync();
+            return Ok(table);
+        }
+
         // Cambiar estado de mesa en tiempo real (Disponible -> Reservada -> Ocupada)
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTableStatusDto dto)

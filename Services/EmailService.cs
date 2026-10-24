@@ -82,7 +82,7 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Fecha</span>
-            <span class='detail-value'>{reservation.ReservationDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))}</span>
+            <span class='detail-value'>{reservation.ReservationDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-DO"))}</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Hora</span>

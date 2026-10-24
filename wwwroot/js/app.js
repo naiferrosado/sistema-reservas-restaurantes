@@ -20,7 +20,12 @@
     // PLANO DE MESAS — Toggle de estado en tiempo real
     // =====================================================================
     document.querySelectorAll('.table-card[data-table-id]').forEach(function (card) {
-        card.addEventListener('click', function () {
+        card.addEventListener('click', function (e) {
+            // Si el clic fue en un botón de acción (editar / eliminar), ignorar toggle
+            if (e.target.closest('.table-action-btn') || e.target.closest('[data-modal-open]')) {
+                return;
+            }
+
             var tableId = this.dataset.tableId;
             var cardEl = this;
 
@@ -143,8 +148,10 @@
 
     // Botones que abren modales
     document.querySelectorAll('[data-modal-open]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
             var modalId = this.dataset.modalOpen;
+
             // Transferir datos al modal (rechazo, previsualización)
             var reservationId = this.dataset.reservationId;
             var reservationCode = this.dataset.reservationCode;
@@ -167,6 +174,97 @@
                         previewEl.srcdoc = emailBody;
                     }
                 }
+            }
+
+            // Transferir datos para edición de platillo
+            if (modalId === 'modal-menu-edit') {
+                var mId = document.getElementById('edit-menu-id');
+                var mName = document.getElementById('edit-menu-name');
+                var mDesc = document.getElementById('edit-menu-desc');
+                var mPrice = document.getElementById('edit-menu-price');
+                var mCat = document.getElementById('edit-menu-category');
+                var mImg = document.getElementById('edit-menu-image');
+                var mTags = document.getElementById('edit-menu-tags');
+                var mAvail = document.getElementById('edit-menu-available');
+
+                if (mId) mId.value = this.dataset.menuId || '';
+                if (mName) mName.value = this.dataset.menuName || '';
+                if (mDesc) mDesc.value = this.dataset.menuDesc || '';
+                if (mPrice) mPrice.value = this.dataset.menuPrice || '';
+                if (mCat && this.dataset.menuCat) mCat.value = this.dataset.menuCat;
+                if (mImg) mImg.value = this.dataset.menuImg || '';
+                if (mTags) mTags.value = this.dataset.menuTags || '';
+                if (mAvail) mAvail.checked = (this.dataset.menuAvailable === 'true');
+            }
+
+            // Transferir datos para eliminación de platillo
+            if (modalId === 'modal-menu-delete') {
+                var delMenuId = document.getElementById('delete-menu-id');
+                var delMenuName = document.querySelector('#modal-menu-delete .modal-menu-name');
+                if (delMenuId) delMenuId.value = this.dataset.menuId || '';
+                if (delMenuName) delMenuName.textContent = '\"' + (this.dataset.menuName || '') + '\"';
+            }
+
+            // Transferir datos para edición de mesa
+            if (modalId === 'modal-table-edit') {
+                var tId = document.getElementById('edit-table-id');
+                var tNum = document.getElementById('edit-table-number');
+                var tCap = document.getElementById('edit-table-capacity');
+                var tLoc = document.getElementById('edit-table-location');
+                var tStat = document.getElementById('edit-table-status');
+
+                if (tId) tId.value = this.dataset.tableId || '';
+                if (tNum) tNum.value = this.dataset.tableNumber || '';
+                if (tCap) tCap.value = this.dataset.tableCapacity || '';
+                if (tLoc && this.dataset.tableLocation) tLoc.value = this.dataset.tableLocation;
+                if (tStat && this.dataset.tableStatus) tStat.value = this.dataset.tableStatus;
+            }
+
+            // Transferir datos para eliminación de mesa
+            if (modalId === 'modal-table-delete') {
+                var delTableId = document.getElementById('delete-table-id');
+                var delTableName = document.querySelector('#modal-table-delete .modal-table-name');
+                if (delTableId) delTableId.value = this.dataset.tableId || '';
+                if (delTableName) delTableName.textContent = 'Mesa ' + (this.dataset.tableNumber || '');
+            }
+
+            // Transferir datos para edición de restaurante
+            if (modalId === 'modal-restaurant-edit') {
+                var rId = document.getElementById('edit-restaurant-id');
+                var rName = document.getElementById('edit-restaurant-name');
+                var rDesc = document.getElementById('edit-restaurant-description');
+                var rAddr = document.getElementById('edit-restaurant-address');
+                var rPhone = document.getElementById('edit-restaurant-phone');
+                var rEmail = document.getElementById('edit-restaurant-email');
+                var rCuisine = document.getElementById('edit-restaurant-cuisinetype');
+                var rOpen = document.getElementById('edit-restaurant-openingtime');
+                var rClose = document.getElementById('edit-restaurant-closingtime');
+                var rImg = document.getElementById('edit-restaurant-imageurl');
+                var rRating = document.getElementById('edit-restaurant-rating');
+                var rPrice = document.getElementById('edit-restaurant-pricerange');
+                var rCap = document.getElementById('edit-restaurant-totalcapacity');
+
+                if (rId) rId.value = this.dataset.restaurantId || '';
+                if (rName) rName.value = this.dataset.restaurantName || '';
+                if (rDesc) rDesc.value = this.dataset.restaurantDescription || '';
+                if (rAddr) rAddr.value = this.dataset.restaurantAddress || '';
+                if (rPhone) rPhone.value = this.dataset.restaurantPhone || '';
+                if (rEmail) rEmail.value = this.dataset.restaurantEmail || '';
+                if (rCuisine) rCuisine.value = this.dataset.restaurantCuisinetype || '';
+                if (rOpen) rOpen.value = this.dataset.restaurantOpeningtime || '';
+                if (rClose) rClose.value = this.dataset.restaurantClosingtime || '';
+                if (rImg) rImg.value = this.dataset.restaurantImageurl || '';
+                if (rRating) rRating.value = this.dataset.restaurantRating || '4.8';
+                if (rPrice) rPrice.value = this.dataset.restaurantPricerange || '$$$';
+                if (rCap) rCap.value = this.dataset.restaurantTotalcapacity || '50';
+            }
+
+            // Transferir datos para eliminación de restaurante
+            if (modalId === 'modal-restaurant-delete') {
+                var delRestId = document.getElementById('delete-restaurant-id');
+                var delRestName = document.querySelector('#modal-restaurant-delete .modal-restaurant-name');
+                if (delRestId) delRestId.value = this.dataset.restaurantId || '';
+                if (delRestName) delRestName.textContent = '\"' + (this.dataset.restaurantName || '') + '\"';
             }
 
             openModal(modalId);

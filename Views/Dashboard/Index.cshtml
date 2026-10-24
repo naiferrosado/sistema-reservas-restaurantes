@@ -14,7 +14,7 @@
                 }
             </p>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             @foreach (var r in Model.Restaurants)
             {
                 <a asp-controller="Dashboard" asp-action="Index"
@@ -24,6 +24,10 @@
                     @r.Name
                 </a>
             }
+            <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create" style="padding:6px 12px; font-size:12.5px; display:inline-flex; align-items:center; gap:5px;" title="Registrar nuevo restaurante">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nuevo Restaurante
+            </button>
         </div>
     </div>
 </div>
@@ -75,6 +79,16 @@
             </svg>
             Gestion de Menu
         </a>
+        <a asp-controller="Dashboard" asp-action="Index"
+           asp-route-restaurantId="@Model.SelectedRestaurantId"
+           asp-route-tab="restaurants"
+           class="tab-link @(Model.ActiveTab == "restaurants" ? "active" : "")">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            </svg>
+            Gestión de Restaurantes
+            <span style="background:var(--bg-surface); color:var(--text-secondary); border:1px solid var(--border-subtle); border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px;">@Model.Restaurants.Count</span>
+        </a>
     </div>
 
     <!-- CONTENIDO POR PESTANA -->
@@ -93,6 +107,10 @@
     else if (Model.ActiveTab == "menu")
     {
         @await Html.PartialAsync("_MenuManagementPartial", Model)
+    }
+    else if (Model.ActiveTab == "restaurants")
+    {
+        @await Html.PartialAsync("_RestaurantsManagementPartial", Model)
     }
 
 </div>
@@ -144,6 +162,508 @@
         <div class="modal-footer">
             <button class="btn btn-secondary" data-modal-close="modal-email-preview">Cerrar</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL: CREAR PLATILLO -->
+<div class="modal-overlay" id="modal-menu-create">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Nuevo Platillo para el Menú</span>
+            <button class="modal-close" data-modal-close="modal-menu-create">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="CreateMenuItem" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Nombre del Platillo</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ej: Risotto de Setas Silvestres" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Categoría</label>
+                        <select name="category" class="form-control form-select" required>
+                            <option value="Entrantes">Entrantes</option>
+                            <option value="Platos Fuertes" selected>Platos Fuertes</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Especialidades">Especialidades</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Precio (RD$)</label>
+                        <input type="number" name="price" step="0.01" min="0.01" class="form-control" placeholder="850.00" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Etiquetas (separadas por coma)</label>
+                        <input type="text" name="tags" class="form-control" placeholder="Especialidad Criolla, Sin Gluten, Recomendado" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">URL de Imagen</label>
+                    <input type="url" name="imageUrl" class="form-control" placeholder="https://images.unsplash.com/photo-..." />
+                    <span class="form-help">Si se deja vacío, el sistema asignará una imagen gastronómica de alta resolución representativa.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Detalla los ingredientes y notas culinarias del platillo..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--text-primary);">
+                        <input type="checkbox" name="isAvailable" value="true" checked style="width:16px; height:16px;" />
+                        Platillo disponible en carta para clientes
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-menu-create">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Platillo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR PLATILLO -->
+<div class="modal-overlay" id="modal-menu-edit">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Editar Platillo</span>
+            <button class="modal-close" data-modal-close="modal-menu-edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="UpdateMenuItem" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="edit-menu-id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Nombre del Platillo</label>
+                        <input type="text" name="name" id="edit-menu-name" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Categoría</label>
+                        <select name="category" id="edit-menu-category" class="form-control form-select" required>
+                            <option value="Entrantes">Entrantes</option>
+                            <option value="Platos Fuertes">Platos Fuertes</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Especialidades">Especialidades</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Precio (RD$)</label>
+                        <input type="number" name="price" id="edit-menu-price" step="0.01" min="0.01" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Etiquetas</label>
+                        <input type="text" name="tags" id="edit-menu-tags" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">URL de Imagen</label>
+                    <input type="url" name="imageUrl" id="edit-menu-image" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" id="edit-menu-desc" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--text-primary);">
+                        <input type="checkbox" name="isAvailable" id="edit-menu-available" value="true" style="width:16px; height:16px;" />
+                        Platillo disponible en carta para clientes
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-menu-edit">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Actualizar Platillo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ELIMINAR PLATILLO -->
+<div class="modal-overlay" id="modal-menu-delete">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <span class="modal-title">Eliminar Platillo</span>
+            <button class="modal-close" data-modal-close="modal-menu-delete">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="DeleteMenuItem" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="delete-menu-id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:12px;">
+                    ¿Confirmas que deseas eliminar el platillo <strong class="modal-menu-name" style="color:var(--text-primary);"></strong> de la carta?
+                </p>
+                <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:0;">
+                    Esta acción quitará el platillo de manera permanente de la carta del restaurante.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-menu-delete">Cancelar</button>
+                <button type="submit" class="btn btn-danger-outline">Eliminar de la Carta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: CREAR MESA -->
+<div class="modal-overlay" id="modal-table-create">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Nueva Mesa</span>
+            <button class="modal-close" data-modal-close="modal-table-create">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="CreateTable" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Número de Mesa</label>
+                        <input type="number" name="tableNumber" class="form-control" placeholder="Ej: 14" min="1" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Capacidad (Personas)</label>
+                        <input type="number" name="capacity" class="form-control" placeholder="Ej: 4" min="1" max="30" value="4" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Zona / Ubicación</label>
+                        <select name="location" class="form-control form-select" required>
+                            <option value="Salón Principal" selected>Salón Principal</option>
+                            <option value="Terraza">Terraza</option>
+                            <option value="Zona VIP">Zona VIP</option>
+                            <option value="Jardín">Jardín</option>
+                            <option value="Barra Gastronómica">Barra Gastronómica</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Estado Inicial</label>
+                        <select name="status" class="form-control form-select" required>
+                            <option value="Disponible" selected>Disponible</option>
+                            <option value="Reservada">Reservada</option>
+                            <option value="Ocupada">Ocupada</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-table-create">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear Mesa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR MESA -->
+<div class="modal-overlay" id="modal-table-edit">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Editar Mesa</span>
+            <button class="modal-close" data-modal-close="modal-table-edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="UpdateTable" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="edit-table-id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Número de Mesa</label>
+                        <input type="number" name="tableNumber" id="edit-table-number" class="form-control" min="1" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Capacidad (Personas)</label>
+                        <input type="number" name="capacity" id="edit-table-capacity" class="form-control" min="1" max="30" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Zona / Ubicación</label>
+                        <select name="location" id="edit-table-location" class="form-control form-select" required>
+                            <option value="Salón Principal">Salón Principal</option>
+                            <option value="Terraza">Terraza</option>
+                            <option value="Zona VIP">Zona VIP</option>
+                            <option value="Jardín">Jardín</option>
+                            <option value="Barra Gastronómica">Barra Gastronómica</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Estado</label>
+                        <select name="status" id="edit-table-status" class="form-control form-select" required>
+                            <option value="Disponible">Disponible</option>
+                            <option value="Reservada">Reservada</option>
+                            <option value="Ocupada">Ocupada</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-table-edit">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ELIMINAR MESA -->
+<div class="modal-overlay" id="modal-table-delete">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <span class="modal-title">Eliminar Mesa</span>
+            <button class="modal-close" data-modal-close="modal-table-delete">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="DeleteTable" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="delete-table-id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:12px;">
+                    ¿Confirmas que deseas eliminar la <strong class="modal-table-name" style="color:var(--text-primary);"></strong> del restaurante?
+                </p>
+                <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:0;">
+                    Las reservas asignadas previamente a esta mesa conservarán su registro y su mesa quedará sin asignar para ser reubicadas.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-table-delete">Cancelar</button>
+                <button type="submit" class="btn btn-danger-outline">Eliminar Mesa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: CREAR RESTAURANTE -->
+<div class="modal-overlay" id="modal-restaurant-create">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Registrar Nuevo Restaurante</span>
+            <button class="modal-close" data-modal-close="modal-restaurant-create">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="CreateRestaurant" method="post">
+            @Html.AntiForgeryToken()
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Nombre del Restaurante</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ej: Sabores del Cibao" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Tipo de Cocina</label>
+                        <input type="text" name="cuisineType" class="form-control" placeholder="Ej: Criolla Gourmet Contemporánea" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Breve propuesta gastronómica y ambiente del restaurante..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Dirección en República Dominicana</label>
+                    <input type="text" name="address" class="form-control" placeholder="Ej: Av. Winston Churchill #105, Piantini, Santo Domingo" required />
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Teléfono (+1 809 / 829 / 849)</label>
+                        <input type="tel" name="phone" class="form-control" placeholder="+1 (809) 555-0100" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Correo de Contacto</label>
+                        <input type="email" name="email" class="form-control" placeholder="contacto@restaurante.com.do" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Hora Apertura</label>
+                        <input type="text" name="openingTime" class="form-control" value="12:00" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Hora Cierre</label>
+                        <input type="text" name="closingTime" class="form-control" value="23:00" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label class="form-label required">Aforo / Capacidad</label>
+                        <input type="number" name="totalCapacity" class="form-control" value="50" min="1" max="500" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Rango de Precios</label>
+                        <select name="priceRange" class="form-control form-select" required>
+                            <option value="$$">$$ (RD$ 600 - 1,200)</option>
+                            <option value="$$$" selected>$$$ (RD$ 1,200 - 2,500)</option>
+                            <option value="$$$$">$$$$ (RD$ 2,500+ Gourmet)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Calificación</label>
+                        <input type="number" name="rating" class="form-control" value="4.8" min="1" max="5" step="0.1" required />
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">URL de Imagen</label>
+                    <input type="url" name="imageUrl" class="form-control" placeholder="https://images.unsplash.com/..." value="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-restaurant-create">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear Restaurante</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR RESTAURANTE -->
+<div class="modal-overlay" id="modal-restaurant-edit">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Editar Restaurante</span>
+            <button class="modal-close" data-modal-close="modal-restaurant-edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="UpdateRestaurant" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="edit-restaurant-id" value="" />
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Nombre del Restaurante</label>
+                        <input type="text" name="name" id="edit-restaurant-name" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Tipo de Cocina</label>
+                        <input type="text" name="cuisineType" id="edit-restaurant-cuisinetype" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" id="edit-restaurant-description" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Dirección en República Dominicana</label>
+                    <input type="text" name="address" id="edit-restaurant-address" class="form-control" required />
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Teléfono</label>
+                        <input type="tel" name="phone" id="edit-restaurant-phone" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Correo de Contacto</label>
+                        <input type="email" name="email" id="edit-restaurant-email" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Hora Apertura</label>
+                        <input type="text" name="openingTime" id="edit-restaurant-openingtime" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Hora Cierre</label>
+                        <input type="text" name="closingTime" id="edit-restaurant-closingtime" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label class="form-label required">Aforo / Capacidad</label>
+                        <input type="number" name="totalCapacity" id="edit-restaurant-totalcapacity" class="form-control" min="1" max="500" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Rango de Precios</label>
+                        <select name="priceRange" id="edit-restaurant-pricerange" class="form-control form-select" required>
+                            <option value="$$">$$ (RD$ 600 - 1,200)</option>
+                            <option value="$$$">$$$ (RD$ 1,200 - 2,500)</option>
+                            <option value="$$$$">$$$$ (RD$ 2,500+ Gourmet)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Calificación</label>
+                        <input type="number" name="rating" id="edit-restaurant-rating" class="form-control" min="1" max="5" step="0.1" required />
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">URL de Imagen</label>
+                    <input type="url" name="imageUrl" id="edit-restaurant-imageurl" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-restaurant-edit">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ELIMINAR RESTAURANTE -->
+<div class="modal-overlay" id="modal-restaurant-delete">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <span class="modal-title">Eliminar Restaurante</span>
+            <button class="modal-close" data-modal-close="modal-restaurant-delete">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="DeleteRestaurant" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="delete-restaurant-id" value="" />
+            <div class="modal-body">
+                <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:12px;">
+                    ¿Confirmas que deseas eliminar permanentemente el restaurante <strong class="modal-restaurant-name" style="color:var(--text-primary);"></strong>?
+                </p>
+                <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:0;">
+                    Esta acción eliminará todas las mesas, menú y registros de reservas vinculados a este restaurante.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-restaurant-delete">Cancelar</button>
+                <button type="submit" class="btn btn-danger-outline">Eliminar Restaurante</button>
+            </div>
+        </form>
     </div>
 </div>
 

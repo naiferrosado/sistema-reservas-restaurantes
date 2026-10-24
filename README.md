@@ -107,10 +107,10 @@ Una vez iniciado el servidor, abre tu navegador en:
 
 Para verificar todas las funcionalidades implementadas en la plataforma:
 
-1. **Explorar Restaurantes y Menus (`/Home/Index`):**
-   - Alterna entre *La Terraza Gourmet*, *Trattoria Don Corleone* y *Sakura Izakaya*.
-   - Revisa la ficha con foto, direccion, telefono, horario y valoracion numerica.
-   - Consulta las cartas gastronomicas categorizadas y la distribucion de mesas por zonas.
+1. **Explorar Restaurantes y Menús (`/Home/Index`):**
+   - Alterna entre *Mesón Colonial Quisqueya*, *Boca Marina & Mar Caribe* y *La Yola Grill & Lounge Piantini*.
+   - Revisa la ficha con foto, dirección en Santo Domingo, teléfono local (+1 809/829), horario y precios en pesos dominicanos (RD$).
+   - Consulta las cartas gastronómicas categorizadas con platos típicos dominicanos y la distribución de mesas por zonas.
 2. **Generar una Reserva (`/Reservations/Create`):**
    - Haz clic en **Reservar Mesa**.
    - Completa el formulario seleccionando fecha, hora, comensales y mesa opcional.

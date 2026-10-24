@@ -38,16 +38,21 @@ export const api = {
   // Restaurantes
   getRestaurants: () => request('/restaurants'),
   getRestaurant: (id) => request(`/restaurants/${id}`),
+  createRestaurant: (data) => request('/restaurants', { method: 'POST', body: JSON.stringify(data) }),
+  updateRestaurant: (id, data) => request(`/restaurants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRestaurant: (id) => request(`/restaurants/${id}`, { method: 'DELETE' }),
 
   // Mesas
   getTables: (restaurantId) => request(`/tables?restaurantId=${restaurantId}`),
   createTable: (data) => request('/tables', { method: 'POST', body: JSON.stringify(data) }),
+  updateTable: (id, data) => request(`/tables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateTableStatus: (id, status) => request(`/tables/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   deleteTable: (id) => request(`/tables/${id}`, { method: 'DELETE' }),
 
   // Menú
   getMenu: (restaurantId) => request(`/menu?restaurantId=${restaurantId}`),
   createMenuItem: (data) => request('/menu', { method: 'POST', body: JSON.stringify(data) }),
+  updateMenuItem: (id, data) => request(`/menu/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteMenuItem: (id) => request(`/menu/${id}`, { method: 'DELETE' }),
 
   // Reservas

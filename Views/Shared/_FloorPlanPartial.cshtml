@@ -3,22 +3,30 @@
 <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
     <div>
         <div style="font-size:14px; color:var(--text-secondary);">
-            Haz clic en una mesa para cambiar su estado operativo en tiempo real.
+            Gestiona la distribución de mesas o haz clic sobre una para cambiar su estado operativo en tiempo real.
         </div>
     </div>
-    <div style="display:flex; gap:16px;">
-        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
-            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-available-text); display:inline-block;"></span>
-            Disponible
-        </span>
-        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
-            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-reserved-text); display:inline-block;"></span>
-            Reservada
-        </span>
-        <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
-            <span style="width:10px; height:10px; border-radius:50%; background:var(--status-occupied-text); display:inline-block;"></span>
-            Ocupada
-        </span>
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div style="display:flex; gap:16px;">
+            <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                <span style="width:10px; height:10px; border-radius:50%; background:var(--status-available-text); display:inline-block;"></span>
+                Disponible
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                <span style="width:10px; height:10px; border-radius:50%; background:var(--status-reserved-text); display:inline-block;"></span>
+                Reservada
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
+                <span style="width:10px; height:10px; border-radius:50%; background:var(--status-occupied-text); display:inline-block;"></span>
+                Ocupada
+            </span>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-table-create">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nueva Mesa
+        </button>
     </div>
 </div>
 
@@ -31,7 +39,15 @@
             </svg>
         </div>
         <p class="empty-state-title">Sin mesas configuradas</p>
-        <p class="empty-state-description">Este restaurante no tiene mesas registradas en el sistema.</p>
+        <p class="empty-state-description">Este restaurante no tiene mesas registradas en el sistema. Agrega una nueva mesa para comenzar.</p>
+        <div style="margin-top:16px;">
+            <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-table-create">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar Primera Mesa
+            </button>
+        </div>
     </div>
 }
 else
@@ -63,7 +79,29 @@ else
                         <div class="table-card @statusClass"
                              data-table-id="@table.Id"
                              data-status="@table.Status"
-                             title="Clic para cambiar estado — Mesa @table.TableNumber (@table.Location)">
+                             title="Clic en la mesa para cambiar estado &bull; Mesa @table.TableNumber (@table.Location)">
+                            <div class="table-card-top">
+                                <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Mesa</span>
+                                <div class="table-card-actions">
+                                    <button type="button" class="table-action-btn btn-table-edit"
+                                            data-modal-open="modal-table-edit"
+                                            data-table-id="@table.Id"
+                                            data-table-number="@table.TableNumber"
+                                            data-table-capacity="@table.Capacity"
+                                            data-table-location="@table.Location"
+                                            data-table-status="@table.Status"
+                                            title="Editar mesa">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    </button>
+                                    <button type="button" class="table-action-btn table-action-btn--delete btn-table-delete"
+                                            data-modal-open="modal-table-delete"
+                                            data-table-id="@table.Id"
+                                            data-table-number="@table.TableNumber"
+                                            title="Eliminar mesa">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                </div>
+                            </div>
                             <div class="table-card-number">@table.TableNumber</div>
                             <div class="table-card-capacity">@table.Capacity personas</div>
                             <div class="table-card-status">

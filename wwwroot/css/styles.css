@@ -1049,6 +1049,45 @@ textarea.form-control {
     background: var(--status-occupied-bg);
 }
 
+.table-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.table-card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.table-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-page);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    padding: 0;
+}
+
+.table-action-btn:hover {
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+    background: var(--bg-surface);
+}
+
+.table-action-btn--delete:hover {
+    color: #DC2626;
+    border-color: #FCA5A5;
+    background: var(--status-occupied-bg);
+}
+
 .table-card-number {
     font-size: 20px;
     font-weight: 800;

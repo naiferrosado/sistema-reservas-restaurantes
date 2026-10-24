@@ -29,7 +29,12 @@ namespace SistemaReservas.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int? restaurantId, string? tab, string? filterStatus, string? filterSearch, DateTime? filterDate)
         {
-            var restaurants = await _context.Restaurants.OrderBy(r => r.Id).ToListAsync();
+            var restaurants = await _context.Restaurants
+                .Include(r => r.Tables)
+                .Include(r => r.MenuItems)
+                .Include(r => r.Reservations)
+                .OrderBy(r => r.Id)
+                .ToListAsync();
 
             if (!restaurants.Any())
             {
@@ -230,6 +235,360 @@ namespace SistemaReservas.Controllers
 
             TempData["SuccessMessage"] = $"Reserva {reservation.ReservationCode} rechazada.";
             return RedirectToAction(nameof(Index), new { restaurantId, tab = "reservations" });
+        }
+
+        // =====================================================================
+        // CRUD GESTIÓN DE MENÚ
+        // =====================================================================
+
+        // POST /Dashboard/CreateMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateMenuItem(
+            int restaurantId,
+            string name,
+            string? description,
+            decimal price,
+            string category,
+            string? imageUrl,
+            string? tags,
+            bool isAvailable = true)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(restaurantId);
+            if (restaurant == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["ErrorMessage"] = "El nombre del platillo es obligatorio.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+            }
+
+            var item = new MenuItem
+            {
+                RestaurantId = restaurantId,
+                Name = name.Trim(),
+                Description = description?.Trim() ?? string.Empty,
+                Price = price > 0 ? price : 0.01m,
+                Category = string.IsNullOrWhiteSpace(category) ? "Platos Fuertes" : category.Trim(),
+                ImageUrl = string.IsNullOrWhiteSpace(imageUrl)
+                    ? "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"
+                    : imageUrl.Trim(),
+                Tags = tags?.Trim() ?? string.Empty,
+                IsAvailable = isAvailable
+            };
+
+            _context.MenuItems.Add(item);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Platillo \"{item.Name}\" agregado a la carta correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // POST /Dashboard/UpdateMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateMenuItem(
+            int id,
+            int restaurantId,
+            string name,
+            string? description,
+            decimal price,
+            string category,
+            string? imageUrl,
+            string? tags,
+            bool isAvailable = true)
+        {
+            var item = await _context.MenuItems.FindAsync(id);
+            if (item == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["ErrorMessage"] = "El nombre del platillo es obligatorio.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+            }
+
+            item.Name = name.Trim();
+            item.Description = description?.Trim() ?? string.Empty;
+            item.Price = price > 0 ? price : 0.01m;
+            item.Category = string.IsNullOrWhiteSpace(category) ? item.Category : category.Trim();
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+                item.ImageUrl = imageUrl.Trim();
+            item.Tags = tags?.Trim() ?? string.Empty;
+            item.IsAvailable = isAvailable;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Platillo \"{item.Name}\" actualizado exitosamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // POST /Dashboard/DeleteMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMenuItem(int id, int restaurantId)
+        {
+            var item = await _context.MenuItems.FindAsync(id);
+            if (item == null) return NotFound();
+
+            var name = item.Name;
+            _context.MenuItems.Remove(item);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Platillo \"{name}\" eliminado de la carta.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // =====================================================================
+        // CRUD PLANO DE MESAS
+        // =====================================================================
+
+        // POST /Dashboard/CreateTable
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateTable(
+            int restaurantId,
+            int tableNumber,
+            int capacity,
+            string location,
+            string status)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(restaurantId);
+            if (restaurant == null) return NotFound();
+
+            if (tableNumber <= 0)
+            {
+                TempData["ErrorMessage"] = "El número de mesa debe ser un entero positivo mayor a cero.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+            }
+
+            var duplicate = await _context.Tables.AnyAsync(t => t.RestaurantId == restaurantId && t.TableNumber == tableNumber);
+            if (duplicate)
+            {
+                TempData["ErrorMessage"] = $"Ya existe una mesa con el número {tableNumber} en este restaurante.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+            }
+
+            var table = new RestaurantTable
+            {
+                RestaurantId = restaurantId,
+                TableNumber = tableNumber,
+                Capacity = capacity > 0 ? capacity : 2,
+                Location = string.IsNullOrWhiteSpace(location) ? "Salón Principal" : location.Trim(),
+                Status = string.IsNullOrWhiteSpace(status) ? "Disponible" : status.Trim(),
+                PosX = 0,
+                PosY = 0
+            };
+
+            _context.Tables.Add(table);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Mesa {table.TableNumber} creada exitosamente en {table.Location}.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+        }
+
+        // POST /Dashboard/UpdateTable
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateTable(
+            int id,
+            int restaurantId,
+            int tableNumber,
+            int capacity,
+            string location,
+            string status)
+        {
+            var table = await _context.Tables.FindAsync(id);
+            if (table == null) return NotFound();
+
+            if (tableNumber <= 0)
+            {
+                TempData["ErrorMessage"] = "El número de mesa debe ser un entero positivo mayor a cero.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+            }
+
+            var duplicate = await _context.Tables.AnyAsync(t => t.RestaurantId == restaurantId && t.TableNumber == tableNumber && t.Id != id);
+            if (duplicate)
+            {
+                TempData["ErrorMessage"] = $"El número de mesa {tableNumber} ya está en uso por otra mesa de este restaurante.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+            }
+
+            table.TableNumber = tableNumber;
+            table.Capacity = capacity > 0 ? capacity : table.Capacity;
+            table.Location = string.IsNullOrWhiteSpace(location) ? table.Location : location.Trim();
+            table.Status = string.IsNullOrWhiteSpace(status) ? table.Status : status.Trim();
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Mesa {table.TableNumber} actualizada exitosamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+        }
+
+        // POST /Dashboard/DeleteTable
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteTable(int id, int restaurantId)
+        {
+            var table = await _context.Tables.FindAsync(id);
+            if (table == null) return NotFound();
+
+            var num = table.TableNumber;
+            _context.Tables.Remove(table);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Mesa {num} eliminada correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+        }
+
+        // ===========================
+        // GESTIÓN DE RESTAURANTES (CRUD)
+        // ===========================
+
+        // POST /Dashboard/CreateRestaurant
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateRestaurant(
+            string name,
+            string description,
+            string address,
+            string phone,
+            string email,
+            string cuisineType,
+            string openingTime,
+            string closingTime,
+            string? imageUrl,
+            double rating,
+            string priceRange,
+            int totalCapacity)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["ErrorMessage"] = "El nombre del restaurante es obligatorio.";
+                return RedirectToAction(nameof(Index), new { tab = "restaurants" });
+            }
+
+            var restaurant = new Restaurant
+            {
+                Name = name.Trim(),
+                Description = description?.Trim() ?? string.Empty,
+                Address = address?.Trim() ?? "Santo Domingo, República Dominicana",
+                Phone = phone?.Trim() ?? "+1 (809) 000-0000",
+                Email = email?.Trim() ?? "info@restaurante.com.do",
+                CuisineType = cuisineType?.Trim() ?? "Criolla Contemporánea",
+                OpeningTime = string.IsNullOrWhiteSpace(openingTime) ? "12:00" : openingTime.Trim(),
+                ClosingTime = string.IsNullOrWhiteSpace(closingTime) ? "23:00" : closingTime.Trim(),
+                ImageUrl = string.IsNullOrWhiteSpace(imageUrl) ? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80" : imageUrl.Trim(),
+                Rating = rating > 0 ? rating : 4.8,
+                PriceRange = string.IsNullOrWhiteSpace(priceRange) ? "$$$" : priceRange.Trim(),
+                TotalCapacity = totalCapacity > 0 ? totalCapacity : 50
+            };
+
+            _context.Restaurants.Add(restaurant);
+            await _context.SaveChangesAsync();
+
+            // Agregar mesas iniciales para el nuevo restaurante
+            var starterTables = new List<RestaurantTable>
+            {
+                new() { RestaurantId = restaurant.Id, TableNumber = 1, Capacity = 2, Location = "Principal", Status = "Disponible" },
+                new() { RestaurantId = restaurant.Id, TableNumber = 2, Capacity = 4, Location = "Principal", Status = "Disponible" },
+                new() { RestaurantId = restaurant.Id, TableNumber = 3, Capacity = 6, Location = "Terraza", Status = "Disponible" },
+                new() { RestaurantId = restaurant.Id, TableNumber = 4, Capacity = 4, Location = "Terraza", Status = "Disponible" }
+            };
+            _context.Tables.AddRange(starterTables);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Restaurante \"{restaurant.Name}\" creado exitosamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId = restaurant.Id, tab = "restaurants" });
+        }
+
+        // POST /Dashboard/UpdateRestaurant
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateRestaurant(
+            int id,
+            string name,
+            string description,
+            string address,
+            string phone,
+            string email,
+            string cuisineType,
+            string openingTime,
+            string closingTime,
+            string? imageUrl,
+            double rating,
+            string priceRange,
+            int totalCapacity)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(id);
+            if (restaurant == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["ErrorMessage"] = "El nombre del restaurante no puede estar vacío.";
+                return RedirectToAction(nameof(Index), new { restaurantId = id, tab = "restaurants" });
+            }
+
+            restaurant.Name = name.Trim();
+            restaurant.Description = description?.Trim() ?? string.Empty;
+            restaurant.Address = address?.Trim() ?? restaurant.Address;
+            restaurant.Phone = phone?.Trim() ?? restaurant.Phone;
+            restaurant.Email = email?.Trim() ?? restaurant.Email;
+            restaurant.CuisineType = cuisineType?.Trim() ?? restaurant.CuisineType;
+            restaurant.OpeningTime = string.IsNullOrWhiteSpace(openingTime) ? restaurant.OpeningTime : openingTime.Trim();
+            restaurant.ClosingTime = string.IsNullOrWhiteSpace(closingTime) ? restaurant.ClosingTime : closingTime.Trim();
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+                restaurant.ImageUrl = imageUrl.Trim();
+            restaurant.Rating = rating > 0 ? rating : restaurant.Rating;
+            restaurant.PriceRange = string.IsNullOrWhiteSpace(priceRange) ? restaurant.PriceRange : priceRange.Trim();
+            restaurant.TotalCapacity = totalCapacity > 0 ? totalCapacity : restaurant.TotalCapacity;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Restaurante \"{restaurant.Name}\" actualizado exitosamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId = id, tab = "restaurants" });
+        }
+
+        // POST /Dashboard/DeleteRestaurant
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteRestaurant(int id)
+        {
+            var count = await _context.Restaurants.CountAsync();
+            if (count <= 1)
+            {
+                TempData["ErrorMessage"] = "No es posible eliminar el único restaurante del sistema.";
+                return RedirectToAction(nameof(Index), new { restaurantId = id, tab = "restaurants" });
+            }
+
+            var restaurant = await _context.Restaurants
+                .Include(r => r.Reservations)
+                .Include(r => r.Tables)
+                .Include(r => r.MenuItems)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (restaurant == null) return NotFound();
+
+            var name = restaurant.Name;
+
+            if (restaurant.Reservations.Any())
+            {
+                var reservationIds = restaurant.Reservations.Select(res => res.Id).ToList();
+                var logs = await _context.Notifications
+                    .Where(n => n.ReservationId != null && reservationIds.Contains(n.ReservationId.Value))
+                    .ToListAsync();
+                _context.Notifications.RemoveRange(logs);
+                _context.Reservations.RemoveRange(restaurant.Reservations);
+            }
+
+            _context.MenuItems.RemoveRange(restaurant.MenuItems);
+            _context.Tables.RemoveRange(restaurant.Tables);
+            _context.Restaurants.RemoveRange(restaurant);
+            await _context.SaveChangesAsync();
+
+            var fallback = await _context.Restaurants.OrderBy(r => r.Id).FirstOrDefaultAsync();
+
+            TempData["SuccessMessage"] = $"Restaurante \"{name}\" eliminado correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId = fallback?.Id, tab = "restaurants" });
         }
 
         // ===========================

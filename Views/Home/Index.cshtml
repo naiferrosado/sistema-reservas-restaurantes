@@ -9,7 +9,7 @@
     <div class="page-header-inner">
         <div>
             <h1 class="page-title">Restaurantes</h1>
-            <p class="page-description">Explora nuestra selección de restaurantes gourmet y realiza tu reserva en línea.</p>
+            <p class="page-description">Explora nuestra selección gastronómica exclusiva en República Dominicana y reserva tu mesa en línea.</p>
         </div>
     </div>
 </div>
@@ -206,7 +206,7 @@
                                             <div class="menu-card-name">@item.Name</div>
                                             <div class="menu-card-description">@item.Description</div>
                                             <div class="menu-card-footer">
-                                                <div class="menu-card-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("es-ES"))</div>
+                                                <div class="menu-card-price">@($"RD$ {item.Price:N2}")</div>
                                                 @if (!string.IsNullOrWhiteSpace(item.Tags))
                                                 {
                                                     <div class="menu-card-tags">
