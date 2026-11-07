@@ -1,0 +1,186 @@
+@model SistemaReservas.ViewModels.DashboardViewModel
+
+<div class="card">
+    <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+            <div class="card-title">Directorio de Restaurantes</div>
+            <div class="card-subtitle">@Model.Restaurants.Count sucursales y marcas gastronómicas registradas en República Dominicana</div>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nuevo Restaurante
+            </button>
+        </div>
+    </div>
+
+    @if (!Model.Restaurants.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+                </svg>
+            </div>
+            <p class="empty-state-title">No hay restaurantes registrados</p>
+            <p class="empty-state-description">Registra tu primer restaurante para habilitar reservaciones y gestión de mesas.</p>
+            <div style="margin-top:16px;">
+                <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Registrar Primer Restaurante
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Restaurante</th>
+                        <th>Ubicación y Contacto</th>
+                        <th>Horario y Capacidad</th>
+                        <th>Recursos Operativos</th>
+                        <th style="text-align:right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Restaurants)
+                    {
+                        var isCurrent = r.Id == Model.SelectedRestaurantId;
+                        <tr style="@(isCurrent ? "background:rgba(27, 54, 93, 0.03);" : "")">
+                            <td>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <img src="@r.ImageUrl" alt="@r.Name"
+                                         style="width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid var(--border-subtle); flex-shrink:0;"
+                                         onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80'" />
+                                    <div>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span style="font-weight:700; font-size:14px; color:var(--text-primary);">@r.Name</span>
+                                            @if (isCurrent)
+                                            {
+                                                <span class="badge badge--aprobada" style="font-size:10.5px; padding:2px 6px;">Activo</span>
+                                            }
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:8px; margin-top:3px; font-size:12px; color:var(--text-secondary);">
+                                            <span style="font-weight:600; color:var(--brand-primary);">@r.CuisineType</span>
+                                            <span>&bull;</span>
+                                            <span style="color:var(--brand-accent); font-weight:700;">@r.PriceRange</span>
+                                            <span>&bull;</span>
+                                            <span style="display:inline-flex; align-items:center; gap:2px; color:#b45309; font-weight:600;">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#b45309" stroke="#b45309"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                                @r.Rating.ToString("F1")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size:12.5px; line-height:1.4;">
+                                    <div style="color:var(--text-primary); font-weight:500; display:flex; align-items:center; gap:5px;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted); flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        @r.Address
+                                    </div>
+                                    <div style="color:var(--text-secondary); margin-top:3px; display:flex; align-items:center; gap:5px;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted); flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        @r.Phone
+                                    </div>
+                                    <div style="color:var(--text-muted); margin-top:2px; font-size:11.5px;">@r.Email</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size:12.5px;">
+                                    <div style="font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:5px;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted); flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        @r.OpeningTime &mdash; @r.ClosingTime
+                                    </div>
+                                    <div style="color:var(--text-secondary); margin-top:3px;">
+                                        Aforo: <strong>@r.TotalCapacity</strong> personas
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                    <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--border-subtle); font-size:11.5px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                        @r.Tables.Count Mesas
+                                    </span>
+                                    <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--border-subtle); font-size:11.5px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                                        @r.MenuItems.Count Platos
+                                    </span>
+                                    <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--border-subtle); font-size:11.5px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/></svg>
+                                        @r.Reservations.Count Reservas
+                                    </span>
+                                </div>
+                            </td>
+                            <td style="text-align:right; white-space:nowrap;">
+                                <div style="display:inline-flex; gap:6px; align-items:center;">
+                                    @if (!isCurrent)
+                                    {
+                                        <a asp-controller="Dashboard" asp-action="Index"
+                                           asp-route-restaurantId="@r.Id"
+                                           asp-route-tab="reservations"
+                                           class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:12px;" title="Ver reservas y operaciones de este restaurante">
+                                            Gestionar
+                                        </a>
+                                    }
+                                    <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                                            data-modal-open="modal-restaurant-edit"
+                                            data-restaurant-id="@r.Id"
+                                            data-restaurant-name="@r.Name"
+                                            data-restaurant-description="@r.Description"
+                                            data-restaurant-address="@r.Address"
+                                            data-restaurant-phone="@r.Phone"
+                                            data-restaurant-email="@r.Email"
+                                            data-restaurant-cuisinetype="@r.CuisineType"
+                                            data-restaurant-openingtime="@r.OpeningTime"
+                                            data-restaurant-closingtime="@r.ClosingTime"
+                                            data-restaurant-imageurl="@r.ImageUrl"
+                                            data-restaurant-rating="@r.Rating"
+                                            data-restaurant-pricerange="@r.PriceRange"
+                                            data-restaurant-totalcapacity="@r.TotalCapacity"
+                                            title="Editar información del restaurante">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                    @if (Model.Restaurants.Count > 1)
+                                    {
+                                        <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                                                data-modal-open="modal-restaurant-delete"
+                                                data-restaurant-id="@r.Id"
+                                                data-restaurant-name="@r.Name"
+                                                style="color:var(--status-rechazada-text);"
+                                                title="Eliminar restaurante">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:0.35; cursor:not-allowed;" title="No es posible eliminar el único restaurante del sistema">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

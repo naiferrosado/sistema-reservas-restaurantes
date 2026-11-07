@@ -169,7 +169,7 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Fecha</span>
-            <span class='detail-value'>{reservation.ReservationDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))}</span>
+            <span class='detail-value'>{reservation.ReservationDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-DO"))}</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Hora</span>
@@ -305,7 +305,8 @@ namespace SistemaReservas.Services
                         UseDefaultCredentials = false,
                         Credentials = new NetworkCredential(smtpUser, smtpPass),
                         EnableSsl = _configuration.GetValue("Smtp:EnableSsl", true),
-                        DeliveryMethod = SmtpDeliveryMethod.Network
+                        DeliveryMethod = SmtpDeliveryMethod.Network,
+                        Timeout = 10000
                     };
 
                     using var mail = new MailMessage
