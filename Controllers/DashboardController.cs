@@ -39,7 +39,7 @@ namespace SistemaReservas.Controllers
             var selectedId = restaurantId ?? restaurants.First().Id;
             var selectedRestaurant = restaurants.FirstOrDefault(r => r.Id == selectedId) ?? restaurants.First();
 
-            var today = DateTime.UtcNow.Date;
+            var today = DateTimeHelper.Today;
 
             // KPIs
             var todayReservations = await _context.Reservations
@@ -230,6 +230,212 @@ namespace SistemaReservas.Controllers
 
             TempData["SuccessMessage"] = $"Reserva {reservation.ReservationCode} rechazada.";
             return RedirectToAction(nameof(Index), new { restaurantId, tab = "reservations" });
+        }
+
+        // POST /Dashboard/CompleteReservation
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteReservation(int id, int restaurantId)
+        {
+            var reservation = await _context.Reservations
+                .Include(r => r.Table)
+                .FirstOrDefaultAsync(r => r.Id == id && r.RestaurantId == restaurantId);
+
+            if (reservation == null)
+                return NotFound();
+
+            reservation.Status = "Finalizada";
+            reservation.UpdatedAt = DateTimeHelper.Now;
+
+            if (reservation.Table != null)
+            {
+                reservation.Table.Status = "Disponible";
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Servicio finalizado para {reservation.ReservationCode}. Mesa liberada.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "reservations" });
+        }
+
+        // POST /Dashboard/ReleaseTable
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReleaseTable(int tableId, int restaurantId)
+        {
+            var table = await _context.Tables.FirstOrDefaultAsync(t => t.Id == tableId && t.RestaurantId == restaurantId);
+            if (table != null)
+            {
+                table.Status = "Disponible";
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Mesa {table.TableNumber} ({table.Location}) marcada como Disponible.";
+            }
+
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+        }
+
+        // POST /Dashboard/ReleaseAllTables
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReleaseAllTables(int restaurantId)
+        {
+            var tables = await _context.Tables
+                .Where(t => t.RestaurantId == restaurantId && t.Status != "Disponible")
+                .ToListAsync();
+
+            foreach (var table in tables)
+            {
+                table.Status = "Disponible";
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Se han liberado {tables.Count} mesa(s). Todas están Disponibles.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
+        }
+
+        // POST /Dashboard/AddMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddMenuItem(int restaurantId, string name, string description, decimal price, string category, string? imageUrl, string? tags, IFormFile? imageFile, bool isAvailable = true)
+        {
+            if (string.IsNullOrWhiteSpace(name) || price <= 0)
+            {
+                TempData["ErrorMessage"] = "El nombre y el precio del platillo son obligatorios.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+            }
+
+            string finalImageUrl = imageUrl?.Trim() ?? string.Empty;
+
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                try
+                {
+                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "dishes");
+                    if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
+
+                    var ext = Path.GetExtension(imageFile.FileName);
+                    if (string.IsNullOrEmpty(ext)) ext = ".jpg";
+                    var fileName = $"{Guid.NewGuid():N}{ext}";
+                    var filePath = Path.Combine(uploadsDir, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    finalImageUrl = $"/uploads/dishes/{fileName}";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al guardar imagen de platillo subida desde PC");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(finalImageUrl))
+            {
+                finalImageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+            }
+
+            var item = new MenuItem
+            {
+                RestaurantId = restaurantId,
+                Name = name.Trim(),
+                Description = description?.Trim() ?? string.Empty,
+                Price = price,
+                Category = string.IsNullOrWhiteSpace(category) ? "Platos Fuertes" : category.Trim(),
+                ImageUrl = finalImageUrl,
+                Tags = tags?.Trim() ?? string.Empty,
+                IsAvailable = isAvailable
+            };
+
+            _context.MenuItems.Add(item);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Platillo '{item.Name}' agregado al menú exitosamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // POST /Dashboard/UpdateMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateMenuItem(int id, int restaurantId, string name, string description, decimal price, string category, string? imageUrl, string? tags, IFormFile? imageFile, bool isAvailable = true)
+        {
+            var item = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id && m.RestaurantId == restaurantId);
+            if (item == null)
+                return NotFound();
+
+            item.Name = name.Trim();
+            item.Description = description?.Trim() ?? string.Empty;
+            item.Price = price;
+            item.Category = string.IsNullOrWhiteSpace(category) ? item.Category : category.Trim();
+            item.Tags = tags?.Trim() ?? string.Empty;
+            item.IsAvailable = isAvailable;
+
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                try
+                {
+                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "dishes");
+                    if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
+
+                    var ext = Path.GetExtension(imageFile.FileName);
+                    if (string.IsNullOrEmpty(ext)) ext = ".jpg";
+                    var fileName = $"{Guid.NewGuid():N}{ext}";
+                    var filePath = Path.Combine(uploadsDir, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    item.ImageUrl = $"/uploads/dishes/{fileName}";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al actualizar imagen desde PC");
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(imageUrl))
+            {
+                item.ImageUrl = imageUrl.Trim();
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Platillo '{item.Name}' actualizado correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // POST /Dashboard/DeleteMenuItem
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMenuItem(int id, int restaurantId)
+        {
+            var item = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id && m.RestaurantId == restaurantId);
+            if (item != null)
+            {
+                _context.MenuItems.Remove(item);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Platillo '{item.Name}' eliminado del menú.";
+            }
+
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
+        }
+
+        // POST /Dashboard/ToggleMenuItemAvailability
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleMenuItemAvailability(int id, int restaurantId)
+        {
+            var item = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id && m.RestaurantId == restaurantId);
+            if (item != null)
+            {
+                item.IsAvailable = !item.IsAvailable;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Platillo '{item.Name}' ahora está {(item.IsAvailable ? "Disponible" : "No disponible")}.";
+            }
+
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
         }
 
         // ===========================

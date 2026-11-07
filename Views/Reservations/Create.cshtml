@@ -94,8 +94,8 @@
                 <div class="form-grid-3">
                     <div class="form-group">
                         <label asp-for="ReservationDate" class="form-label required"></label>
-                        <input asp-for="ReservationDate" class="form-control" type="date"
-                               min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                        <input asp-for="ReservationDate" class="form-control" type="date" id="reservation-date-input"
+                               min="@SistemaReservas.Services.DateTimeHelper.Today.ToString("yyyy-MM-dd")"
                                value="@Model.ReservationDate.ToString("yyyy-MM-dd")" />
                         <span asp-validation-for="ReservationDate" class="field-validation-error"></span>
                     </div>
@@ -174,4 +174,44 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dateInput = document.getElementById('reservation-date-input');
+            const timeSelect = document.querySelector('select[name="ReservationTime"]');
+            if (!dateInput || !timeSelect) return;
+
+            function updateTimeSlots() {
+                const todayStr = '@SistemaReservas.Services.DateTimeHelper.Today.ToString("yyyy-MM-dd")';
+                const selectedDate = dateInput.value;
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                const currentMinutesTotal = (currentHour * 60) + currentMinute;
+
+                let firstValidOption = null;
+
+                for (let i = 0; i < timeSelect.options.length; i++) {
+                    const opt = timeSelect.options[i];
+                    const [h, m] = opt.value.split(':').map(Number);
+                    const optMinutesTotal = (h * 60) + m;
+
+                    if (selectedDate === todayStr && optMinutesTotal <= currentMinutesTotal) {
+                        opt.disabled = true;
+                        opt.textContent = opt.value + ' hrs (Ya transcurrido)';
+                    } else {
+                        opt.disabled = false;
+                        opt.textContent = opt.value + ' hrs';
+                        if (!firstValidOption) firstValidOption = opt;
+                    }
+                }
+
+                if (timeSelect.selectedOptions[0] && timeSelect.selectedOptions[0].disabled && firstValidOption) {
+                    firstValidOption.selected = true;
+                }
+            }
+
+            dateInput.addEventListener('change', updateTimeSlots);
+            updateTimeSlots();
+        });
+    </script>
 }

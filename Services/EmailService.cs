@@ -19,6 +19,93 @@ namespace SistemaReservas.Services
             _logger = logger;
         }
 
+        public async Task SendReservationReceivedAsync(Reservation reservation)
+        {
+            var restaurantName = reservation.Restaurant?.Name ?? "Restaurante";
+            var subject = $"Solicitud de Reserva Recibida en {restaurantName} — Código: {reservation.ReservationCode}";
+
+            var bodyHtml = $@"<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='utf-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px; color: #0F172A; }}
+    .wrapper {{ max-width: 600px; margin: 0 auto; }}
+    .card {{ background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }}
+    .header {{ background: #1B365D; padding: 32px 28px; text-align: center; color: #FFFFFF; }}
+    .header-restaurant {{ font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; margin-bottom: 8px; }}
+    .header-title {{ font-size: 22px; font-weight: 800; margin: 0; }}
+    .header-subtitle {{ font-size: 14px; opacity: 0.85; margin-top: 6px; }}
+    .status-badge {{ display: inline-block; background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 5px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; margin-top: 14px; }}
+    .content {{ padding: 32px 28px; }}
+    .greeting {{ font-size: 17px; font-weight: 700; color: #0F172A; margin: 0 0 10px 0; }}
+    .intro {{ font-size: 14px; color: #475569; line-height: 1.65; margin-bottom: 24px; }}
+    .code-box {{ text-align: center; border: 2px dashed #CBD5E1; border-radius: 10px; padding: 20px; margin-bottom: 24px; background: #F8FAFC; }}
+    .code-label {{ font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }}
+    .code-value {{ font-size: 26px; font-weight: 800; color: #1B365D; letter-spacing: 0.08em; font-family: monospace; }}
+    .details-box {{ background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; margin-bottom: 24px; }}
+    .detail-row {{ display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; }}
+    .detail-row:last-child {{ border-bottom: none; }}
+    .detail-label {{ color: #64748B; font-size: 13px; font-weight: 500; }}
+    .detail-value {{ color: #0F172A; font-size: 13.5px; font-weight: 600; text-align: right; }}
+    .footer {{ background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 12.5px; color: #94A3B8; }}
+  </style>
+</head>
+<body>
+  <div class='wrapper'>
+    <div class='card'>
+      <div class='header'>
+        <div class='header-restaurant'>{restaurantName}</div>
+        <h1 class='header-title'>Solicitud de Reserva Recibida</h1>
+        <p class='header-subtitle'>Hemos recibido tu solicitud y está en proceso de revisión</p>
+        <div class='status-badge'>Estado: Pendiente de Aprobación</div>
+      </div>
+      <div class='content'>
+        <p class='greeting'>Hola, {reservation.CustomerName}</p>
+        <p class='intro'>Gracias por preferirnos. Tu solicitud ha sido registrada exitosamente en nuestro sistema y está siendo evaluada por el equipo de sala. Te notificaremos a este mismo correo en cuanto sea aprobada.</p>
+
+        <div class='code-box'>
+          <div class='code-label'>Código de Solicitud</div>
+          <div class='code-value'>{reservation.ReservationCode}</div>
+        </div>
+
+        <div class='details-box'>
+          <div class='detail-row'>
+            <span class='detail-label'>Restaurante</span>
+            <span class='detail-value'>{restaurantName}</span>
+          </div>
+          <div class='detail-row'>
+            <span class='detail-label'>Fecha</span>
+            <span class='detail-value'>{reservation.ReservationDate:dd/MM/yyyy}</span>
+          </div>
+          <div class='detail-row'>
+            <span class='detail-label'>Hora solicitada</span>
+            <span class='detail-value'>{reservation.ReservationTime} hrs</span>
+          </div>
+          <div class='detail-row'>
+            <span class='detail-label'>Comensales</span>
+            <span class='detail-value'>{reservation.PartySize} personas</span>
+          </div>
+          <div class='detail-row'>
+            <span class='detail-label'>Dirección</span>
+            <span class='detail-value'>{reservation.Restaurant?.Address ?? ""}</span>
+          </div>
+        </div>
+
+        <p style='font-size:13.5px; color:#64748B;'>Puedes consultar el estado de tu reserva en cualquier momento ingresando tu código en nuestra plataforma.</p>
+      </div>
+      <div class='footer'>
+        <p>Sistema Automatizado de Reservas &bull; {restaurantName}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>";
+
+            await RecordAndOptionallySendAsync(reservation, subject, bodyHtml);
+        }
+
         public async Task SendReservationConfirmationAsync(Reservation reservation)
         {
             var restaurantName = reservation.Restaurant?.Name ?? "Restaurante";
@@ -203,11 +290,11 @@ namespace SistemaReservas.Services
         {
             var status = "Enviado (Simulacion)";
 
-            var smtpHost = _configuration["Smtp:Host"];
+            var smtpHost = _configuration["Smtp:Host"]?.Trim();
             var smtpPort = _configuration.GetValue<int?>("Smtp:Port");
-            var smtpUser = _configuration["Smtp:User"];
-            var smtpPass = _configuration["Smtp:Password"];
-            var smtpFrom = _configuration["Smtp:From"] ?? "notificaciones@sistemareservas.local";
+            var smtpUser = _configuration["Smtp:User"]?.Trim();
+            var smtpPass = _configuration["Smtp:Password"]?.Replace(" ", "").Trim();
+            var smtpFrom = _configuration["Smtp:From"]?.Trim() ?? "notificaciones@sistemareservas.local";
 
             if (!string.IsNullOrEmpty(smtpHost) && smtpPort.HasValue && !string.IsNullOrEmpty(smtpUser))
             {
@@ -215,8 +302,10 @@ namespace SistemaReservas.Services
                 {
                     using var client = new SmtpClient(smtpHost, smtpPort.Value)
                     {
+                        UseDefaultCredentials = false,
                         Credentials = new NetworkCredential(smtpUser, smtpPass),
-                        EnableSsl = _configuration.GetValue("Smtp:EnableSsl", true)
+                        EnableSsl = _configuration.GetValue("Smtp:EnableSsl", true),
+                        DeliveryMethod = SmtpDeliveryMethod.Network
                     };
 
                     using var mail = new MailMessage
@@ -234,8 +323,15 @@ namespace SistemaReservas.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error al enviar correo SMTP. Registrando en bandeja de notificaciones.");
-                    status = "Error SMTP (Guardado en bandeja)";
+                    _logger.LogWarning(ex, "Error al enviar correo SMTP a {Email}. Registrando en bandeja de notificaciones.", reservation.CustomerEmail);
+                    if (ex.Message.Contains("5.7.8") || ex.Message.Contains("Username and Password not accepted") || ex.Message.Contains("Authentication"))
+                    {
+                        status = "Error SMTP: Contraseña rechazada por Gmail (Requiere Contraseña de Aplicación de 16 letras)";
+                    }
+                    else
+                    {
+                        status = $"Error SMTP ({ex.Message})";
+                    }
                 }
             }
 
@@ -247,7 +343,7 @@ namespace SistemaReservas.Services
                 Subject = subject,
                 BodyHtml = bodyHtml,
                 Status = status,
-                SentAt = DateTime.UtcNow
+                SentAt = DateTimeHelper.Now
             };
 
             _context.Notifications.Add(notification);

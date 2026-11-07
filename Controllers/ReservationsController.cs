@@ -45,7 +45,7 @@ namespace SistemaReservas.Controllers
                 Restaurant = restaurant,
                 Restaurants = restaurants,
                 AvailableTables = availableTables,
-                ReservationDate = DateTime.Today.AddDays(1)
+                ReservationDate = DateTimeHelper.Today
             };
 
             return View(vm);
@@ -79,6 +79,26 @@ namespace SistemaReservas.Controllers
             {
                 ModelState.AddModelError("", "El restaurante seleccionado no existe.");
                 return View(vm);
+            }
+
+            // Validación de fecha y hora local (República Dominicana)
+            var dominicanNow = DateTimeHelper.Now;
+            if (vm.ReservationDate.Date < dominicanNow.Date)
+            {
+                ModelState.AddModelError("ReservationDate", "No puedes realizar una reserva en una fecha anterior a hoy.");
+                return View(vm);
+            }
+
+            if (vm.ReservationDate.Date == dominicanNow.Date)
+            {
+                if (TimeSpan.TryParse(vm.ReservationTime, out var selectedTime))
+                {
+                    if (selectedTime <= dominicanNow.TimeOfDay)
+                    {
+                        ModelState.AddModelError("ReservationTime", $"La hora {vm.ReservationTime} hrs ya ha pasado para el día de hoy. La hora actual es {dominicanNow:HH:mm} hrs.");
+                        return View(vm);
+                    }
+                }
             }
 
             var targetDate = DateTime.SpecifyKind(vm.ReservationDate.Date, DateTimeKind.Utc);
@@ -132,8 +152,8 @@ namespace SistemaReservas.Controllers
                     .FirstOrDefault();
             }
 
-            // Generar código único RES-XXXX-XXXX
-            var code = $"RES-{DateTime.UtcNow:MMdd}-{Random.Shared.Next(1000, 9999)}";
+            // Generar código único RES-XXXX-XXXX con fecha local
+            var code = $"RES-{dominicanNow:MMdd}-{Random.Shared.Next(1000, 9999)}";
 
             var reservation = new Reservation
             {
@@ -148,15 +168,25 @@ namespace SistemaReservas.Controllers
                 PartySize = vm.PartySize,
                 SpecialRequests = vm.SpecialRequests?.Trim() ?? string.Empty,
                 Status = "Pendiente",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = dominicanNow
             };
 
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            // Cargar relaciones para la vista de confirmación
+            // Cargar relaciones para la vista de confirmación y el correo
             reservation.Restaurant = restaurant;
             reservation.Table = selectedTable;
+
+            // Enviar correo de notificación de solicitud recibida
+            try
+            {
+                await _emailService.SendReservationReceivedAsync(reservation);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error al enviar correo de recepción para reserva {Code}", reservation.ReservationCode);
+            }
 
             return RedirectToAction(nameof(Confirmation), new { id = reservation.Id });
         }

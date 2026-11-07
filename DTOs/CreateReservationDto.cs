@@ -29,6 +29,6 @@ namespace SistemaReservas.DTOs
         [Range(1, 20, ErrorMessage = "El número de comensales debe ser entre 1 y 20")]
         public int PartySize { get; set; }
 
-        public string SpecialRequests { get; set; } = string.Empty;
+        public string? SpecialRequests { get; set; }
     }
 }

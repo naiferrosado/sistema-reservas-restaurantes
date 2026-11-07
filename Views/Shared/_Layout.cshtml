@@ -152,6 +152,52 @@
 
     <script src="~/js/app.js" asp-append-version="true"></script>
 
+    <!-- MODAL CORPORATIVO DE CONFIRMACIÓN (Reemplaza alerts y confirms nativos) -->
+    <div class="modal-overlay" id="modal-app-confirm" style="display:none; z-index:9999;">
+        <div class="modal modal-sm" style="max-width:440px;">
+            <div class="modal-header">
+                <span class="modal-title" id="app-confirm-title">Confirmar Acción</span>
+                <button type="button" class="modal-close" onclick="closeAppConfirmModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:20px 24px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                    <div style="width:40px; height:40px; border-radius:50%; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--brand-primary);" id="app-confirm-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <div>
+                        <div id="app-confirm-message" style="font-size:14px; color:var(--text-primary); line-height:1.5;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="gap:10px;">
+                <button type="button" class="btn btn-secondary" onclick="closeAppConfirmModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="app-confirm-btn-ok">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    window.showAppConfirm = function(options) {
+        document.getElementById('app-confirm-title').textContent = options.title || 'Confirmar';
+        document.getElementById('app-confirm-message').textContent = options.message || '¿Deseas continuar con esta acción?';
+        const okBtn = document.getElementById('app-confirm-btn-ok');
+        okBtn.textContent = options.okText || 'Confirmar';
+        okBtn.className = 'btn ' + (options.okClass || 'btn-primary');
+        okBtn.onclick = function() {
+            closeAppConfirmModal();
+            if (typeof options.onConfirm === 'function') {
+                options.onConfirm();
+            }
+        };
+        document.getElementById('modal-app-confirm').style.display = 'flex';
+    };
+    window.closeAppConfirmModal = function() {
+        document.getElementById('modal-app-confirm').style.display = 'none';
+    };
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

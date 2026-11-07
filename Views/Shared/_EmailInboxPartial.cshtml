@@ -25,9 +25,10 @@ else
             @foreach (var notification in Model.Notifications)
             {
                 var isSimulated = notification.Status.Contains("Simulac") || notification.Status.Contains("Simulado");
-                var statusColor = notification.Status.StartsWith("Enviado vía SMTP") ? "var(--status-available-text)"
+                var isSentSmtp = notification.Status.Contains("SMTP") && !notification.Status.StartsWith("Error");
+                var statusColor = isSentSmtp ? "#16A34A"
                     : isSimulated ? "var(--status-pending-text)"
-                    : "var(--status-occupied-text)";
+                    : "#DC2626";
 
                 <div class="inbox-item"
                      data-modal-open="modal-email-preview"

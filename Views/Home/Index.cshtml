@@ -206,7 +206,7 @@
                                             <div class="menu-card-name">@item.Name</div>
                                             <div class="menu-card-description">@item.Description</div>
                                             <div class="menu-card-footer">
-                                                <div class="menu-card-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("es-ES"))</div>
+                                                <div class="menu-card-price">RD$ @item.Price.ToString("N2")</div>
                                                 @if (!string.IsNullOrWhiteSpace(item.Tags))
                                                 {
                                                     <div class="menu-card-tags">

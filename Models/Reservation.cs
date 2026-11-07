@@ -21,7 +21,7 @@ namespace SistemaReservas.Models
         public string ReservationTime { get; set; } = string.Empty; // e.g. "19:30"
         public int PartySize { get; set; }
 
-        public string SpecialRequests { get; set; } = string.Empty;
+        public string? SpecialRequests { get; set; }
         public string Status { get; set; } = "Pendiente"; // Pendiente, Confirmada, Rechazada, Cancelada, Completada
         public string? AdminNotes { get; set; }
 

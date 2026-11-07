@@ -38,8 +38,8 @@ namespace SistemaReservas.ViewModels
         public int PartySize { get; set; } = 2;
 
         [StringLength(500, ErrorMessage = "Las peticiones especiales no pueden exceder 500 caracteres")]
-        [Display(Name = "Peticiones especiales")]
-        public string SpecialRequests { get; set; } = string.Empty;
+        [Display(Name = "Peticiones especiales (opcional)")]
+        public string? SpecialRequests { get; set; }
 
         // Datos para el formulario — no se validan en POST
         public Restaurant? Restaurant { get; set; }

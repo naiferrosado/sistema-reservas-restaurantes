@@ -1,11 +1,18 @@
 @model SistemaReservas.ViewModels.DashboardViewModel
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
             <div class="card-title">Carta del Restaurante</div>
-            <div class="card-subtitle">@Model.MenuItems.Count platillos registrados &mdash; @Model.MenuByCategory.Count categorias</div>
+            <div class="card-subtitle">@Model.MenuItems.Count platillos registrados &mdash; @Model.MenuByCategory.Count categorías</div>
         </div>
+        <button type="button" class="btn btn-primary" onclick="openAddDishModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Platillo
+        </button>
     </div>
 
     @if (!Model.MenuByCategory.Any())
@@ -16,8 +23,8 @@
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 </svg>
             </div>
-            <p class="empty-state-title">Carta vacia</p>
-            <p class="empty-state-description">No hay platillos registrados para este restaurante. Utiliza la API para agregar items al menu.</p>
+            <p class="empty-state-title">Carta vacía</p>
+            <p class="empty-state-description">No hay platillos registrados para este restaurante. Haz clic en "Nuevo Platillo" para agregar uno.</p>
         </div>
     }
     else
@@ -33,10 +40,11 @@
                         <thead>
                             <tr>
                                 <th>Platillo</th>
-                                <th>Descripcion</th>
+                                <th>Descripción</th>
                                 <th>Precio</th>
                                 <th>Etiquetas</th>
                                 <th>Disponible</th>
+                                <th style="text-align:right;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -44,18 +52,21 @@
                             {
                                 <tr>
                                     <td>
-                                        <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="display:flex; align-items:center; gap:12px;">
                                             <img src="@item.ImageUrl" alt="@item.Name"
-                                                 style="width:40px; height:40px; border-radius:6px; object-fit:cover; background:var(--bg-surface);"
+                                                 style="width:48px; height:48px; border-radius:8px; object-fit:cover; background:var(--bg-surface); border:1px solid var(--border-subtle);"
                                                  onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=80&q=60'" />
-                                            <span style="font-weight:600; font-size:13.5px; color:var(--text-primary);">@item.Name</span>
+                                            <div>
+                                                <div style="font-weight:600; font-size:13.5px; color:var(--text-primary);">@item.Name</div>
+                                                <div style="font-size:11px; color:var(--text-muted);">@item.Category</div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td style="max-width:260px;">
                                         <span style="font-size:13px; color:var(--text-secondary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">@item.Description</span>
                                     </td>
                                     <td style="white-space:nowrap; font-weight:700; color:var(--brand-accent); font-size:14px;">
-                                        @item.Price.ToString("C", new System.Globalization.CultureInfo("es-ES"))
+                                        RD$ @item.Price.ToString("N2")
                                     </td>
                                     <td>
                                         @if (!string.IsNullOrWhiteSpace(item.Tags))
@@ -73,20 +84,45 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (item.IsAvailable)
-                                        {
-                                            <span class="badge badge--aprobada">
-                                                <span class="status-dot"></span>
-                                                Disponible
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge badge--rechazada">
-                                                <span class="status-dot"></span>
-                                                No disponible
-                                            </span>
-                                        }
+                                        <form asp-controller="Dashboard" asp-action="ToggleMenuItemAvailability" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                            <button type="submit" class="btn btn-ghost" style="padding:0; border:none; background:none; cursor:pointer;" title="Alternar disponibilidad">
+                                                @if (item.IsAvailable)
+                                                {
+                                                    <span class="badge badge--aprobada">
+                                                        <span class="status-dot"></span>
+                                                        Disponible
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge--rechazada">
+                                                        <span class="status-dot"></span>
+                                                        No disponible
+                                                    </span>
+                                                }
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px;">
+                                            <button type="button" class="btn btn-secondary btn-xs"
+                                                    onclick='openEditDishModal(@item.Id, @Json.Serialize(item.Name), @Json.Serialize(item.Description), @item.Price, @Json.Serialize(item.Category), @Json.Serialize(item.ImageUrl), @Json.Serialize(item.Tags), @(item.IsAvailable ? "true" : "false"))'>
+                                                Editar
+                                            </button>
+
+                                            <form asp-controller="Dashboard" asp-action="DeleteMenuItem" method="post" style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                                <button type="button" class="btn btn-danger-outline btn-xs"
+                                                        onclick="showAppConfirm({ title: 'Eliminar Platillo', message: '¿Seguro que deseas eliminar el platillo &quot;@item.Name&quot; de la carta?', okText: 'Eliminar Platillo', okClass: 'btn-danger', onConfirm: () => this.closest('form').submit() })">
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -95,9 +131,220 @@
                 </div>
             </div>
         }
-
-        <div style="padding:12px 20px; background:var(--bg-surface); font-size:12.5px; color:var(--text-muted);">
-            Gestiona los platillos utilizando los endpoints API en <a href="/swagger" target="_blank" style="color:var(--brand-primary); font-weight:600;">/swagger</a>
-        </div>
     }
 </div>
+
+<!-- MODAL: AGREGAR NUEVO PLATILLO -->
+<div class="modal-overlay" id="modal-add-dish" style="display:none;">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Agregar Nuevo Platillo</span>
+            <button type="button" class="modal-close" onclick="closeAddDishModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="AddMenuItem" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label required">Nombre del Platillo</label>
+                    <input type="text" name="name" class="form-control" placeholder="Ej: Chivo Liniero Especial" required />
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <div class="form-group">
+                        <label class="form-label required">Categoría</label>
+                        <select name="category" class="form-control form-select" required>
+                            <option value="Entrantes">Entrantes</option>
+                            <option value="Platos Fuertes" selected>Platos Fuertes</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Especiales del Chef">Especiales del Chef</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Precio (RD$)</label>
+                        <input type="number" step="0.01" min="1" name="price" class="form-control" placeholder="950.00" required />
+                    </div>
+                </div>
+
+                <!-- SELECCIÓN Y SUBIDA DE FOTO DESDE PC O URL -->
+                <div class="form-group">
+                    <label class="form-label">Foto del Platillo</label>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">1. Subir imagen desde tu computadora:</span>
+                            <input type="file" name="imageFile" id="add-dish-file" class="form-control" accept="image/*"
+                                   onchange="previewLocalImage(this, 'add-dish-preview')" />
+                        </div>
+                        <div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">2. O ingresar URL web de la foto:</span>
+                            <input type="url" name="imageUrl" id="add-dish-img-url" class="form-control"
+                                   placeholder="https://images.unsplash.com/photo-..."
+                                   oninput="previewDishImage(this.value, 'add-dish-preview')" />
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-top:4px; padding:10px; background:var(--bg-surface); border-radius:8px; border:1px solid var(--border-subtle);">
+                            <img id="add-dish-preview" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=120&q=80"
+                                 alt="Vista previa" style="width:58px; height:58px; border-radius:8px; object-fit:cover; border:1px solid var(--border-medium);" />
+                            <div>
+                                <span style="font-size:13px; font-weight:600; color:var(--text-primary); display:block;">Previsualización de la foto</span>
+                                <span style="font-size:12px; color:var(--text-muted);">Esta imagen se mostrará a los comensales en el menú digital.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Etiquetas (separadas por coma)</label>
+                    <input type="text" name="tags" class="form-control" placeholder="Ej: Especial Criollo, Sin Gluten, Recomendado" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Describe los ingredientes y la preparación del platillo..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px;">
+                        <input type="checkbox" name="isAvailable" value="true" checked />
+                        <span>Disponible en la carta inmediatamente</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddDishModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Platillo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR PLATILLO -->
+<div class="modal-overlay" id="modal-edit-dish" style="display:none;">
+    <div class="modal modal-md">
+        <div class="modal-header">
+            <span class="modal-title">Modificar Platillo</span>
+            <button type="button" class="modal-close" onclick="closeEditDishModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Dashboard" asp-action="UpdateMenuItem" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="edit-dish-id" value="" />
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label required">Nombre del Platillo</label>
+                    <input type="text" name="name" id="edit-dish-name" class="form-control" required />
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <div class="form-group">
+                        <label class="form-label required">Categoría</label>
+                        <select name="category" id="edit-dish-category" class="form-control form-select" required>
+                            <option value="Entrantes">Entrantes</option>
+                            <option value="Platos Fuertes">Platos Fuertes</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Especiales del Chef">Especiales del Chef</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Precio (RD$)</label>
+                        <input type="number" step="0.01" min="1" name="price" id="edit-dish-price" class="form-control" required />
+                    </div>
+                </div>
+
+                <!-- SUBIR IMAGEN DESDE PC O URL EN EDICIÓN -->
+                <div class="form-group">
+                    <label class="form-label">Foto del Platillo</label>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Cambiar foto desde tu computadora:</span>
+                            <input type="file" name="imageFile" id="edit-dish-file" class="form-control" accept="image/*"
+                                   onchange="previewLocalImage(this, 'edit-dish-preview')" />
+                        </div>
+                        <div>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">O actualizar URL de la foto:</span>
+                            <input type="url" name="imageUrl" id="edit-dish-img-url" class="form-control"
+                                   oninput="previewDishImage(this.value, 'edit-dish-preview')" />
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-top:4px; padding:10px; background:var(--bg-surface); border-radius:8px; border:1px solid var(--border-subtle);">
+                            <img id="edit-dish-preview" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=120&q=80"
+                                 alt="Vista previa" style="width:58px; height:58px; border-radius:8px; object-fit:cover; border:1px solid var(--border-medium);" />
+                            <div>
+                                <span style="font-size:13px; font-weight:600; color:var(--text-primary); display:block;">Foto actual</span>
+                                <span style="font-size:12px; color:var(--text-muted);">Puedes subir una foto nueva o conservar la actual.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Etiquetas</label>
+                    <input type="text" name="tags" id="edit-dish-tags" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" id="edit-dish-description" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px;">
+                        <input type="checkbox" name="isAvailable" id="edit-dish-available" value="true" />
+                        <span>Platillo disponible actualmente</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditDishModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Actualizar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAddDishModal() {
+    document.getElementById('modal-add-dish').style.display = 'flex';
+}
+function closeAddDishModal() {
+    document.getElementById('modal-add-dish').style.display = 'none';
+}
+function openEditDishModal(id, name, desc, price, cat, imgUrl, tags, isAvail) {
+    document.getElementById('edit-dish-id').value = id;
+    document.getElementById('edit-dish-name').value = name;
+    document.getElementById('edit-dish-description').value = desc || '';
+    document.getElementById('edit-dish-price').value = price;
+    document.getElementById('edit-dish-category').value = cat;
+    document.getElementById('edit-dish-img-url').value = imgUrl || '';
+    document.getElementById('edit-dish-tags').value = tags || '';
+    document.getElementById('edit-dish-available').checked = isAvail;
+    previewDishImage(imgUrl, 'edit-dish-preview');
+    document.getElementById('modal-edit-dish').style.display = 'flex';
+}
+function closeEditDishModal() {
+    document.getElementById('modal-edit-dish').style.display = 'none';
+}
+function previewDishImage(url, imgId) {
+    const img = document.getElementById(imgId);
+    if (!img) return;
+    if (url && url.trim().length > 5) {
+        img.src = url;
+    } else {
+        img.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=120&q=80';
+    }
+}
+function previewLocalImage(input, imgId) {
+    const img = document.getElementById(imgId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (img) img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>

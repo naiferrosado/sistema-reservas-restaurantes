@@ -1,10 +1,19 @@
 @model SistemaReservas.ViewModels.DashboardViewModel
 
 <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-    <div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <div style="font-size:14px; color:var(--text-secondary);">
-            Haz clic en una mesa para cambiar su estado operativo en tiempo real.
+            Haz clic en una mesa para rotar su estado o usa los botones para liberarlas.
         </div>
+        <form asp-controller="Dashboard" asp-action="ReleaseAllTables" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+            <button type="button" class="btn btn-secondary btn-xs" style="gap:6px; font-weight:600;"
+                    onclick="showAppConfirm({ title: 'Liberar Mesas', message: '¿Deseas marcar todas las mesas ocupadas o reservadas como Disponibles?', okText: 'Liberar Todas', okClass: 'btn-primary', onConfirm: () => this.closest('form').submit() })">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Poner Todas las Mesas Disponibles
+            </button>
+        </form>
     </div>
     <div style="display:flex; gap:16px;">
         <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary);">
@@ -70,6 +79,18 @@ else
                                 <span class="table-status-indicator"></span>
                                 <span>@table.Status</span>
                             </div>
+                            @if (table.Status != "Disponible")
+                            {
+                                <form asp-controller="Dashboard" asp-action="ReleaseTable" method="post" style="margin-top:8px; width:100%;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.Id" />
+                                    <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                    <button type="submit" class="btn btn-secondary btn-xs" style="width:100%; font-size:11px; padding:3px 6px;"
+                                            onclick="event.stopPropagation();" title="Marcar como Disponible">
+                                        Liberar Mesa
+                                    </button>
+                                </form>
+                            }
                         </div>
                     }
                 </div>

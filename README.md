@@ -1,6 +1,6 @@
 # Sistema de Gestion de Reservas para Restaurantes
 
-Plataforma web integral desarrollada bajo el patron arquitectonico **ASP.NET Core MVC** con **Entity Framework Core** y **PostgreSQL**. Incorpora un sistema de diseno corporativo de fondo blanco, sin emojis y con iconografia vectorial, orientado a la automatizacion del proceso de reservas gastronomicas.
+Plataforma web integral desarrollada bajo el patron arquitectonico **ASP.NET Core MVC** con **Entity Framework Core** y **PostgreSQL**. Incorpora un sistema de diseno corporativo de fondo blanco, sin emojis y con iconografia vectorial, orientado a la automatizacion del proceso de reservas gastronomicas en restaurantes dominicanos.
 
 ---
 
@@ -60,10 +60,12 @@ Crea la base de datos llamada **`restaurantereservas`** en tu servidor local:
 ### Paso 3: Configurar Credenciales (`appsettings.json`)
 Copia la plantilla `appsettings.example.json`:
 
-```bash
+```powershell
 # Windows PowerShell
 Copy-Item appsettings.example.json appsettings.json
+```
 
+```bash
 # Linux / macOS
 cp appsettings.example.json appsettings.json
 ```
@@ -108,9 +110,9 @@ Una vez iniciado el servidor, abre tu navegador en:
 Para verificar todas las funcionalidades implementadas en la plataforma:
 
 1. **Explorar Restaurantes y Menus (`/Home/Index`):**
-   - Alterna entre *La Terraza Gourmet*, *Trattoria Don Corleone* y *Sakura Izakaya*.
-   - Revisa la ficha con foto, direccion, telefono, horario y valoracion numerica.
-   - Consulta las cartas gastronomicas categorizadas y la distribucion de mesas por zonas.
+   - Alterna entre *Meson Colonial Quisqueya*, *Boca Marina & Mar Caribe* y *La Yola Grill & Lounge Piantini*.
+   - Revisa la ficha con foto, direccion en Santo Domingo, telefono local (+1 809/829), horario y precios en pesos dominicanos (RD$).
+   - Consulta las cartas gastronomicas categorizadas con platos tipicos dominicanos y la distribucion de mesas por zonas.
 2. **Generar una Reserva (`/Reservations/Create`):**
    - Haz clic en **Reservar Mesa**.
    - Completa el formulario seleccionando fecha, hora, comensales y mesa opcional.
@@ -124,7 +126,7 @@ Para verificar todas las funcionalidades implementadas en la plataforma:
    - Observa las 4 tarjetas KPI (Reservas hoy, comensales, ocupacion en sala % y pendientes).
    - En la tabla de reservas, aprueba una solicitud para disparar la confirmacion por correo o rechazala indicando un motivo.
 6. **Plano de Mesas en Sala (`/Dashboard/Index?tab=floorplan`):**
-   - Haz clic en cualquier mesa para alternar su estado operativo en vivo (*Disponible* -> *Reservada* -> *Ocupada* -> *Disponible*) en menos de 50 ms.
+   - Haz clic en cualquier mesa para alternar su estado operativo en vivo (*Disponible* &rarr; *Reservada* &rarr; *Ocupada* &rarr; *Disponible*) en menos de 50 ms.
 7. **Bandeja de Auditoria de Correos (`/Dashboard/Index?tab=inbox`):**
    - Haz clic sobre un correo registrado para abrir el modal de previsualizacion HTML con el diseno oficial enviado al cliente.
 
@@ -136,5 +138,5 @@ Para verificar todas las funcionalidades implementadas en la plataforma:
 - **Modelos y Vistas:** Vistas Razor (`Views/`) modulares con Tag Helpers, asociadas a ViewModels fuertemente tipados (`ViewModels/`).
 - **Persistencia:** Entity Framework Core con proveedor `Npgsql.EntityFrameworkCore.PostgreSQL`.
 - **Seguridad:** Control de acceso con `[Authorize]` y autenticacion por cookies (`CookieAuthenticationDefaults`).
-- **Diseno:** Vanilla CSS en [styles.css](file:///c:/Users/Naifer/Documents/sistema-reservas-restaurantes/wwwroot/css/styles.css) con paleta corporativa (`#1B365D`, `#C85A32`, fondo blanco puro) y cero emojis.
+- **Diseno:** Vanilla CSS en [styles.css](file:///c:/Users/Marlin%20Sena/Desktop/restaurante/sistema-reservas-restaurantes/wwwroot/css/styles.css) con paleta corporativa (`#1B365D`, `#C85A32`, fondo blanco puro) y cero emojis.
 - **Servicio de Notificaciones:** `EmailService` con generacion de plantillas HTML y respaldo auditable en `NotificationLog`.

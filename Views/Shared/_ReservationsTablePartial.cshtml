@@ -116,8 +116,8 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@res.Id" />
                                             <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
-                                            <button type="submit" class="btn btn-success btn-xs"
-                                                    onclick="return confirm('Aprobar la reserva @res.ReservationCode de @res.CustomerName?')">
+                                            <button type="button" class="btn btn-success btn-xs"
+                                                    onclick="showAppConfirm({ title: 'Aprobar Reserva', message: '¿Confirmar y aprobar la reserva @res.ReservationCode para @res.CustomerName?', okText: 'Aprobar Reserva', okClass: 'btn-success', onConfirm: () => this.closest('form').submit() })">
                                                 Aprobar
                                             </button>
                                         </form>
@@ -129,6 +129,19 @@
                                                 data-reservation-code="@res.ReservationCode">
                                             Rechazar
                                         </button>
+                                    }
+                                    else if (res.Status == "Aprobada" || res.Status == "Confirmada")
+                                    {
+                                        <form asp-controller="Dashboard" asp-action="CompleteReservation" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@res.Id" />
+                                            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                            <button type="button" class="btn btn-secondary btn-xs"
+                                                    title="Finalizar visita del comensal y liberar la mesa ocupada"
+                                                    onclick="showAppConfirm({ title: 'Liberar Mesa', message: '¿Finalizar el servicio de la reserva @res.ReservationCode y marcar su mesa como Disponible?', okText: 'Liberar Mesa', okClass: 'btn-primary', onConfirm: () => this.closest('form').submit() })">
+                                                Liberar Mesa
+                                            </button>
+                                        </form>
                                     }
                                     else
                                     {
