@@ -24,10 +24,13 @@
                     @r.Name
                 </a>
             }
-            <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create" style="padding:6px 12px; font-size:12.5px; display:inline-flex; align-items:center; gap:5px;" title="Registrar nuevo restaurante">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Nuevo Restaurante
-            </button>
+            @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+            {
+                <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create" style="padding:6px 12px; font-size:12.5px; display:inline-flex; align-items:center; gap:5px;" title="Registrar nuevo restaurante">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nuevo Restaurante
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -57,38 +60,57 @@
             </svg>
             Plano de Mesas
         </a>
-        <a asp-controller="Dashboard" asp-action="Index"
-           asp-route-restaurantId="@Model.SelectedRestaurantId"
-           asp-route-tab="inbox"
-           class="tab-link @(Model.ActiveTab == "inbox" ? "active" : "")">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-            </svg>
-            Bandeja de Correos
-            @if (Model.Notifications.Any())
-            {
-                <span style="background:var(--brand-primary); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px; min-width:20px; text-align:center;">@Model.Notifications.Count</span>
-            }
-        </a>
-        <a asp-controller="Dashboard" asp-action="Index"
-           asp-route-restaurantId="@Model.SelectedRestaurantId"
-           asp-route-tab="menu"
-           class="tab-link @(Model.ActiveTab == "menu" ? "active" : "")">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-            </svg>
-            Gestion de Menu
-        </a>
-        <a asp-controller="Dashboard" asp-action="Index"
-           asp-route-restaurantId="@Model.SelectedRestaurantId"
-           asp-route-tab="restaurants"
-           class="tab-link @(Model.ActiveTab == "restaurants" ? "active" : "")">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-            </svg>
-            Gestión de Restaurantes
-            <span style="background:var(--bg-surface); color:var(--text-secondary); border:1px solid var(--border-subtle); border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px;">@Model.Restaurants.Count</span>
-        </a>
+        @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado") || User.IsInRole("Anfitrión / Recepcionista"))
+        {
+            <a asp-controller="Dashboard" asp-action="Index"
+               asp-route-restaurantId="@Model.SelectedRestaurantId"
+               asp-route-tab="inbox"
+               class="tab-link @(Model.ActiveTab == "inbox" ? "active" : "")">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+                </svg>
+                Bandeja de Correos
+                @if (Model.Notifications.Any())
+                {
+                    <span style="background:var(--brand-primary); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px; min-width:20px; text-align:center;">@Model.Notifications.Count</span>
+                }
+            </a>
+        }
+        @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+        {
+            <a asp-controller="Dashboard" asp-action="Index"
+               asp-route-restaurantId="@Model.SelectedRestaurantId"
+               asp-route-tab="menu"
+               class="tab-link @(Model.ActiveTab == "menu" ? "active" : "")">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Gestion de Menu
+            </a>
+            <a asp-controller="Dashboard" asp-action="Index"
+               asp-route-restaurantId="@Model.SelectedRestaurantId"
+               asp-route-tab="restaurants"
+               class="tab-link @(Model.ActiveTab == "restaurants" ? "active" : "")">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+                </svg>
+                Gestión de Restaurantes
+                <span style="background:var(--bg-surface); color:var(--text-secondary); border:1px solid var(--border-subtle); border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px;">@Model.Restaurants.Count</span>
+            </a>
+        }
+        @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+        {
+            <a asp-controller="Dashboard" asp-action="Index"
+               asp-route-restaurantId="@Model.SelectedRestaurantId"
+               asp-route-tab="users"
+               class="tab-link @(Model.ActiveTab == "users" ? "active" : "")">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Usuarios
+                <span style="background:var(--bg-surface); color:var(--text-secondary); border:1px solid var(--border-subtle); border-radius:99px; font-size:11px; font-weight:700; padding:1px 7px;">@Model.Users.Count</span>
+            </a>
+        }
     </div>
 
     <!-- CONTENIDO POR PESTANA -->
@@ -100,71 +122,80 @@
     {
         @await Html.PartialAsync("_FloorPlanPartial", Model)
     }
-    else if (Model.ActiveTab == "inbox")
+    else if (Model.ActiveTab == "inbox" && (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado") || User.IsInRole("Anfitrión / Recepcionista")))
     {
         @await Html.PartialAsync("_EmailInboxPartial", Model)
     }
-    else if (Model.ActiveTab == "menu")
+    else if (Model.ActiveTab == "menu" && (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado")))
     {
         @await Html.PartialAsync("_MenuManagementPartial", Model)
     }
-    else if (Model.ActiveTab == "restaurants")
+    else if (Model.ActiveTab == "restaurants" && (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado")))
     {
         @await Html.PartialAsync("_RestaurantsManagementPartial", Model)
+    }
+    else if (Model.ActiveTab == "users" && (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado")))
+    {
+        @await Html.PartialAsync("_UsersManagementPartial", Model)
     }
 
 </div>
 
-<!-- MODAL: RECHAZAR RESERVA -->
-<div class="modal-overlay" id="modal-reject">
-    <div class="modal modal-sm">
-        <div class="modal-header">
-            <span class="modal-title">Rechazar Reserva</span>
-            <button class="modal-close" data-modal-close="modal-reject">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-        </div>
-        <form asp-controller="Dashboard" asp-action="RejectReservation" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="" />
-            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
-            <div class="modal-body">
-                <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:16px;">
-                    Esta accion notificara al cliente por correo electronico con el motivo proporcionado.
-                    La reserva <strong class="modal-reservation-code font-mono"></strong> quedara como <strong>Rechazada</strong>.
-                </p>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label required">Motivo del rechazo</label>
-                    <textarea name="reason" class="form-control" rows="3"
-                              placeholder="Ej: Aforo completo para el horario solicitado." required></textarea>
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado") || User.IsInRole("Anfitrión / Recepcionista"))
+{
+    <!-- MODAL: RECHAZAR RESERVA -->
+    <div class="modal-overlay" id="modal-reject">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <span class="modal-title">Rechazar Reserva</span>
+                <button class="modal-close" data-modal-close="modal-reject">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <form asp-controller="Dashboard" asp-action="RejectReservation" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="" />
+                <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                <div class="modal-body">
+                    <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:16px;">
+                        Esta accion notificara al cliente por correo electronico con el motivo proporcionado.
+                        La reserva <strong class="modal-reservation-code font-mono"></strong> quedara como <strong>Rechazada</strong>.
+                    </p>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label required">Motivo del rechazo</label>
+                        <textarea name="reason" class="form-control" rows="3"
+                                  placeholder="Ej: Aforo completo para el horario solicitado." required></textarea>
+                    </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal-close="modal-reject">Cancelar</button>
+                    <button type="submit" class="btn btn-danger-outline">Confirmar Rechazo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PREVISUALIZAR CORREO -->
+    <div class="modal-overlay" id="modal-email-preview">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <span class="modal-title">Vista previa del correo enviado</span>
+                <button class="modal-close" data-modal-close="modal-email-preview">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:0;">
+                <iframe id="email-preview-frame" style="width:100%; height:520px; border:none;" title="Vista previa del correo HTML"></iframe>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-modal-close="modal-reject">Cancelar</button>
-                <button type="submit" class="btn btn-danger-outline">Confirmar Rechazo</button>
+                <button class="btn btn-secondary" data-modal-close="modal-email-preview">Cerrar</button>
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL: PREVISUALIZAR CORREO -->
-<div class="modal-overlay" id="modal-email-preview">
-    <div class="modal modal-lg">
-        <div class="modal-header">
-            <span class="modal-title">Vista previa del correo enviado</span>
-            <button class="modal-close" data-modal-close="modal-email-preview">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-        </div>
-        <div class="modal-body" style="padding:0;">
-            <iframe id="email-preview-frame" style="width:100%; height:520px; border:none;" title="Vista previa del correo HTML"></iframe>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-modal-close="modal-email-preview">Cerrar</button>
         </div>
     </div>
-</div>
+}
 
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+{
 <!-- MODAL: CREAR PLATILLO -->
 <div class="modal-overlay" id="modal-menu-create">
     <div class="modal modal-md">
@@ -327,7 +358,10 @@
         </form>
     </div>
 </div>
+}
 
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+{
 <!-- MODAL: CREAR MESA -->
 <div class="modal-overlay" id="modal-table-create">
     <div class="modal modal-md">
@@ -463,7 +497,10 @@
         </form>
     </div>
 </div>
+}
 
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+{
 <!-- MODAL: CREAR RESTAURANTE -->
 <div class="modal-overlay" id="modal-restaurant-create">
     <div class="modal modal-md">
@@ -550,7 +587,10 @@
         </form>
     </div>
 </div>
+}
 
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+{
 <!-- MODAL: EDITAR RESTAURANTE -->
 <div class="modal-overlay" id="modal-restaurant-edit">
     <div class="modal modal-md">
@@ -638,7 +678,10 @@
         </form>
     </div>
 </div>
+}
 
+@if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+{
 <!-- MODAL: ELIMINAR RESTAURANTE -->
 <div class="modal-overlay" id="modal-restaurant-delete">
     <div class="modal modal-sm">
@@ -666,6 +709,7 @@
         </form>
     </div>
 </div>
+}
 
 @section Scripts {
 <script>

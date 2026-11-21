@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaReservas.Data;
@@ -36,6 +37,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<ActionResult<MenuItem>> CreateItem([FromBody] CreateMenuItemDto dto)
         {
             var restaurant = await _context.Restaurants.FindAsync(dto.RestaurantId);
@@ -65,6 +67,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> UpdateItem(int id, [FromBody] CreateMenuItemDto dto)
         {
             var item = await _context.MenuItems.FindAsync(id);
@@ -86,6 +89,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> DeleteItem(int id)
         {
             var item = await _context.MenuItems.FindAsync(id);

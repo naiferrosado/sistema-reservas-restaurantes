@@ -29,6 +29,22 @@ namespace SistemaReservas.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int? restaurantId, string? tab, string? filterStatus, string? filterSearch, DateTime? filterDate)
         {
+            var currentRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrador";
+
+            // Control de acceso a pestañas según rol
+            if (tab == "users" && currentRole != "Administrador" && currentRole != "Gerente / Encargado")
+            {
+                tab = "reservations";
+            }
+            if ((tab == "menu" || tab == "restaurants") && currentRole != "Administrador" && currentRole != "Gerente / Encargado")
+            {
+                tab = "reservations";
+            }
+            if (tab == "inbox" && currentRole == "Mesero / Personal de Sala")
+            {
+                tab = "reservations";
+            }
+
             var restaurants = await _context.Restaurants
                 .Include(r => r.Tables)
                 .Include(r => r.MenuItems)
@@ -100,7 +116,7 @@ namespace SistemaReservas.Controllers
 
             // Bandeja de correos
             var notifications = await _context.Notifications
-                .Where(n => n.ReservationId != null)
+                .Where(n => n.ReservationId != null || n.Subject.Contains("Contraseña"))
                 .OrderByDescending(n => n.SentAt)
                 .Take(50)
                 .ToListAsync();
@@ -115,6 +131,11 @@ namespace SistemaReservas.Controllers
             var menuByCategory = menuItems
                 .GroupBy(m => m.Category)
                 .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Lista de usuarios (para el módulo de gestión)
+            var users = await _context.Users
+                .OrderBy(u => u.FullName)
+                .ToListAsync();
 
             var vm = new DashboardViewModel
             {
@@ -139,14 +160,218 @@ namespace SistemaReservas.Controllers
                 TablesByZone = tablesByZone,
                 Notifications = notifications,
                 MenuItems = menuItems,
-                MenuByCategory = menuByCategory
+                MenuByCategory = menuByCategory,
+                Users = users
             };
 
             return View(vm);
         }
 
+        // =====================================================================
+        // MÓDULO DE GESTIÓN DE USUARIOS (Administrador y Gerente)
+        // =====================================================================
+
+        // POST /Dashboard/CreateUser
+        [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateUser(
+            int restaurantId,
+            string fullName,
+            string email,
+            string temporaryPassword,
+            string role,
+            bool isActive = true)
+        {
+            if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(temporaryPassword))
+            {
+                TempData["ErrorMessage"] = "Todos los campos obligatorios deben completarse.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var cleanEmail = email.Trim().ToLowerInvariant();
+            var exists = await _context.Users.AnyAsync(u => u.Email.ToLower() == cleanEmail);
+            if (exists)
+            {
+                TempData["ErrorMessage"] = $"El correo electrónico '{cleanEmail}' ya se encuentra registrado con otro usuario.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
+            var user = new User
+            {
+                FullName = fullName.Trim(),
+                Email = cleanEmail,
+                Role = string.IsNullOrWhiteSpace(role) ? "Anfitrión / Recepcionista" : role.Trim(),
+                IsActive = isActive,
+                PasswordHash = hasher.HashPassword(cleanEmail, temporaryPassword.Trim()),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Usuario creado: {Email} con rol {Role}", user.Email, user.Role);
+            TempData["SuccessMessage"] = $"Usuario \"{user.FullName}\" ({user.Role}) creado exitosamente.";
+
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+        }
+
+        // POST /Dashboard/UpdateUser
+        [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateUser(
+            int id,
+            int restaurantId,
+            string fullName,
+            string email,
+            string role,
+            bool isActive = true)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+            {
+                TempData["ErrorMessage"] = "El nombre y el correo son obligatorios.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var cleanEmail = email.Trim().ToLowerInvariant();
+            var duplicate = await _context.Users.AnyAsync(u => u.Email.ToLower() == cleanEmail && u.Id != id);
+            if (duplicate)
+            {
+                TempData["ErrorMessage"] = $"El correo '{cleanEmail}' ya está asignado a otro usuario.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            // Si es el usuario logueado en sesión, proteger contra auto-desactivación o pérdida de rol administrativo
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (currentUserId == id.ToString())
+            {
+                role = user.Role;
+                isActive = true;
+            }
+
+            user.FullName = fullName.Trim();
+            user.Email = cleanEmail;
+            user.Role = role.Trim();
+            user.IsActive = isActive;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Usuario \"{user.FullName}\" actualizado correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+        }
+
+        // POST /Dashboard/ToggleUserStatus
+        [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleUserStatus(int id, int restaurantId)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (currentUserId == id.ToString())
+            {
+                TempData["ErrorMessage"] = "No puedes desactivar tu propia cuenta activa.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            user.IsActive = !user.IsActive;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"El usuario \"{user.FullName}\" ahora está {(user.IsActive ? "Activo" : "Inactivo")}.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+        }
+
+        // POST /Dashboard/ResetUserPassword
+        [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetUserPassword(
+            int id,
+            int restaurantId,
+            string? newPassword,
+            bool sendEmail = false)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
+
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                user.PasswordHash = hasher.HashPassword(user.Email, newPassword.Trim());
+                user.ResetToken = null;
+                user.ResetTokenExpiresAt = null;
+                await _context.SaveChangesAsync();
+            }
+
+            if (sendEmail)
+            {
+                var tokenBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+                var token = Convert.ToHexString(tokenBytes).ToLowerInvariant();
+                user.ResetToken = token;
+                user.ResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30);
+                await _context.SaveChangesAsync();
+
+                var resetLink = Url.Action("ResetPassword", "Account", new { token, email = user.Email }, Request.Scheme)
+                    ?? $"{Request.Scheme}://{Request.Host}/Account/ResetPassword?token={token}&email={Uri.EscapeDataString(user.Email)}";
+
+                try
+                {
+                    await _emailService.SendPasswordResetAsync(user.Email, user.FullName, resetLink, 30);
+                    TempData["SuccessMessage"] = $"Contraseña actualizada y enlace de acceso enviado a {user.Email}.";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al enviar correo de recuperación a {Email}", user.Email);
+                    TempData["SuccessMessage"] = $"Contraseña actualizada para {user.FullName}, pero falló el envío del correo SMTP.";
+                }
+            }
+            else
+            {
+                TempData["SuccessMessage"] = $"Contraseña de {user.FullName} actualizada exitosamente.";
+            }
+
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+        }
+
+        // POST /Dashboard/DeleteUser
+        [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser(int id, int restaurantId)
+        {
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (currentUserId == id.ToString())
+            {
+                TempData["ErrorMessage"] = "No puedes eliminar tu propio usuario en sesión.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            var name = user.FullName;
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Usuario \"{name}\" eliminado correctamente.";
+            return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+        }
+
+        // =====================================================================
+        // GESTIÓN DE RESERVAS (Aprobación, Rechazo, Finalización)
+        // =====================================================================
+
         // POST /Dashboard/ApproveReservation
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApproveReservation(int id, int restaurantId)
         {
@@ -189,6 +414,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/RejectReservation
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RejectReservation(int id, int restaurantId, string? reason)
         {
@@ -239,6 +465,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/CompleteReservation
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista,Mesero / Personal de Sala")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompleteReservation(int id, int restaurantId)
         {
@@ -265,6 +492,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/ReleaseTable
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista,Mesero / Personal de Sala")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReleaseTable(int tableId, int restaurantId)
         {
@@ -281,6 +509,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/ReleaseAllTables
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista,Mesero / Personal de Sala")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReleaseAllTables(int restaurantId)
         {
@@ -299,11 +528,12 @@ namespace SistemaReservas.Controllers
         }
 
         // =====================================================================
-        // CRUD GESTIÓN DE MENÚ
+        // CRUD GESTIÓN DE MENÚ (Solo Administrador y Gerente)
         // =====================================================================
 
         // POST /Dashboard/AddMenuItem
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddMenuItem(
             int restaurantId,
@@ -375,6 +605,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/CreateMenuItem (alias para compatibilidad)
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> CreateMenuItem(
             int restaurantId,
@@ -391,6 +622,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/UpdateMenuItem
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateMenuItem(
             int id,
@@ -458,6 +690,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/DeleteMenuItem
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteMenuItem(int id, int restaurantId)
         {
@@ -475,6 +708,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/ToggleMenuItemAvailability
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleMenuItemAvailability(int id, int restaurantId)
         {
@@ -490,11 +724,12 @@ namespace SistemaReservas.Controllers
         }
 
         // =====================================================================
-        // CRUD PLANO DE MESAS
+        // CRUD PLANO DE MESAS (Administrador y Gerente)
         // =====================================================================
 
         // POST /Dashboard/CreateTable
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTable(
             int restaurantId,
@@ -539,6 +774,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/UpdateTable
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateTable(
             int id,
@@ -577,6 +813,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/DeleteTable
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteTable(int id, int restaurantId)
         {
@@ -591,12 +828,13 @@ namespace SistemaReservas.Controllers
             return RedirectToAction(nameof(Index), new { restaurantId, tab = "floorplan" });
         }
 
-        // ===========================
-        // GESTIÓN DE RESTAURANTES (CRUD)
-        // ===========================
+        // =====================================================================
+        // GESTIÓN DE RESTAURANTES (Solo Administrador)
+        // =====================================================================
 
         // POST /Dashboard/CreateRestaurant
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateRestaurant(
             string name,
@@ -653,6 +891,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/UpdateRestaurant
         [HttpPost]
+        [Authorize(Roles = "Administrador")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateRestaurant(
             int id,
@@ -700,6 +939,7 @@ namespace SistemaReservas.Controllers
 
         // POST /Dashboard/DeleteRestaurant
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {

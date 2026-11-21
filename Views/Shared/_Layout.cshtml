@@ -63,9 +63,9 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #F1F5F9; border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--brand-primary);">
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #F1F5F9; border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--brand-primary);" title="Rol: @(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)">
                             <span style="width: 7px; height: 7px; border-radius: 50%; background: #059669;"></span>
-                            @(User.Identity.Name ?? "Admin")
+                            @(User.Identity.Name ?? "Usuario") &bull; <span style="color: var(--text-muted); font-weight: 500;">@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Admin")</span>
                         </span>
                         <a asp-controller="Account" asp-action="Logout" class="btn btn-secondary btn-xs" title="Cerrar sesión">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

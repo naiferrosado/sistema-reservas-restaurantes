@@ -286,9 +286,89 @@ namespace SistemaReservas.Services
             await RecordAndOptionallySendAsync(reservation, subject, bodyHtml);
         }
 
+        public async Task SendPasswordResetAsync(string email, string fullName, string resetLink, int expirationMinutes = 30)
+        {
+            var subject = "Recuperación de Contraseña — Sistema de Reservas";
+
+            var bodyHtml = $@"<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='utf-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px; color: #0F172A; }}
+    .wrapper {{ max-width: 600px; margin: 0 auto; }}
+    .card {{ background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); }}
+    .header {{ background: #102542; padding: 32px 28px; text-align: center; color: #FFFFFF; }}
+    .header-badge {{ font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-bottom: 8px; }}
+    .header-title {{ font-size: 22px; font-weight: 800; margin: 0; }}
+    .content {{ padding: 32px 28px; }}
+    .greeting {{ font-size: 16px; font-weight: 700; color: #0F172A; margin: 0 0 12px 0; }}
+    .intro {{ font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px; }}
+    .btn-container {{ text-align: center; margin: 28px 0; }}
+    .btn {{ display: inline-block; background-color: #102542; color: #FFFFFF !important; font-size: 14.5px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 8px; box-shadow: 0 2px 4px rgba(16, 37, 66, 0.2); }}
+    .notice {{ background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #102542; border-radius: 6px; padding: 14px 16px; font-size: 13px; color: #475569; line-height: 1.5; margin: 24px 0 16px; }}
+    .link-alt {{ font-size: 12px; color: #94A3B8; word-break: break-all; margin-top: 16px; line-height: 1.5; }}
+    .footer {{ background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 12px; color: #94A3B8; }}
+  </style>
+</head>
+<body>
+  <div class='wrapper'>
+    <div class='card'>
+      <div class='header'>
+        <div class='header-badge'>Seguridad de la Cuenta</div>
+        <h1 class='header-title'>Recuperación de Contraseña</h1>
+      </div>
+      <div class='content'>
+        <p class='greeting'>Hola, {fullName}</p>
+        <p class='intro'>Hemos recibido una solicitud para restablecer la contraseña asociada a tu cuenta administrativa en el <strong>Sistema de Reservas</strong>. Para crear una nueva contraseña, haz clic en el siguiente botón:</p>
+
+        <div class='btn-container'>
+          <a href='{resetLink}' class='btn' target='_blank'>Restablecer Contraseña</a>
+        </div>
+
+        <div class='notice'>
+          <strong>Importante:</strong> Este enlace tiene una validez de <strong>{expirationMinutes} minutos</strong> por razones de seguridad. Si expira, deberás solicitar uno nuevo desde el portal de acceso.
+        </div>
+
+        <p class='intro' style='font-size:13px; margin-bottom: 8px;'>Si tú no realizaste esta solicitud, puedes ignorar este mensaje de forma segura; tu contraseña actual no será modificada.</p>
+
+        <div class='link-alt'>
+          Si el botón no funciona, copia y pega este enlace en tu navegador:<br/>
+          <a href='{resetLink}' style='color:#102542;'>{resetLink}</a>
+        </div>
+      </div>
+      <div class='footer'>
+        <p>Sistema Automatizado de Reservas &bull; Plataforma Gastronómica</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>";
+
+            await RecordAndOptionallySendDirectAsync(email, fullName, subject, bodyHtml);
+        }
+
         private async Task RecordAndOptionallySendAsync(Reservation reservation, string subject, string bodyHtml)
         {
-            var status = "Enviado (Simulacion)";
+            await RecordAndOptionallySendDirectAsync(
+                reservation.CustomerEmail,
+                reservation.CustomerName,
+                subject,
+                bodyHtml,
+                reservation.Id,
+                reservation.Restaurant?.Name);
+        }
+
+        private async Task RecordAndOptionallySendDirectAsync(
+            string recipientEmail,
+            string recipientName,
+            string subject,
+            string bodyHtml,
+            int? reservationId = null,
+            string? senderName = null)
+        {
+            var status = "Enviado (Simulación)";
 
             var smtpHost = _configuration["Smtp:Host"]?.Trim();
             var smtpPort = _configuration.GetValue<int?>("Smtp:Port");
@@ -311,20 +391,20 @@ namespace SistemaReservas.Services
 
                     using var mail = new MailMessage
                     {
-                        From = new MailAddress(smtpFrom, reservation.Restaurant?.Name ?? "SistemaReservas"),
+                        From = new MailAddress(smtpFrom, senderName ?? "SistemaReservas"),
                         Subject = subject,
                         Body = bodyHtml,
                         IsBodyHtml = true
                     };
-                    mail.To.Add(reservation.CustomerEmail);
+                    mail.To.Add(recipientEmail);
 
                     await client.SendMailAsync(mail);
-                    status = "Enviado via SMTP";
-                    _logger.LogInformation("Correo enviado via SMTP a {Email}", reservation.CustomerEmail);
+                    status = "Enviado vía SMTP";
+                    _logger.LogInformation("Correo enviado vía SMTP a {Email}", recipientEmail);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error al enviar correo SMTP a {Email}. Registrando en bandeja de notificaciones.", reservation.CustomerEmail);
+                    _logger.LogWarning(ex, "Error al enviar correo SMTP a {Email}. Registrando en bandeja de notificaciones.", recipientEmail);
                     if (ex.Message.Contains("5.7.8") || ex.Message.Contains("Username and Password not accepted") || ex.Message.Contains("Authentication"))
                     {
                         status = "Error SMTP: Contraseña rechazada por Gmail (Requiere Contraseña de Aplicación de 16 letras)";
@@ -338,9 +418,9 @@ namespace SistemaReservas.Services
 
             var notification = new NotificationLog
             {
-                ReservationId = reservation.Id,
-                RecipientEmail = reservation.CustomerEmail,
-                RecipientName = reservation.CustomerName,
+                ReservationId = reservationId,
+                RecipientEmail = recipientEmail,
+                RecipientName = recipientName,
                 Subject = subject,
                 BodyHtml = bodyHtml,
                 Status = status,

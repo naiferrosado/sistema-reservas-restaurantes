@@ -111,24 +111,31 @@
                                 <div class="table-actions">
                                     @if (res.Status == "Pendiente")
                                     {
-                                        <!-- Aprobar -->
-                                        <form asp-controller="Dashboard" asp-action="ApproveReservation" method="post" style="display:inline;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@res.Id" />
-                                            <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
-                                            <button type="button" class="btn btn-success btn-xs"
-                                                    onclick="showAppConfirm({ title: 'Aprobar Reserva', message: '¿Confirmar y aprobar la reserva @res.ReservationCode para @res.CustomerName?', okText: 'Aprobar Reserva', okClass: 'btn-success', onConfirm: () => this.closest('form').submit() })">
-                                                Aprobar
-                                            </button>
-                                        </form>
+                                        @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado") || User.IsInRole("Anfitrión / Recepcionista"))
+                                        {
+                                            <!-- Aprobar -->
+                                            <form asp-controller="Dashboard" asp-action="ApproveReservation" method="post" style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@res.Id" />
+                                                <input type="hidden" name="restaurantId" value="@Model.SelectedRestaurantId" />
+                                                <button type="button" class="btn btn-success btn-xs"
+                                                        onclick="showAppConfirm({ title: 'Aprobar Reserva', message: '¿Confirmar y aprobar la reserva @res.ReservationCode para @res.CustomerName?', okText: 'Aprobar Reserva', okClass: 'btn-success', onConfirm: () => this.closest('form').submit() })">
+                                                    Aprobar
+                                                </button>
+                                            </form>
 
-                                        <!-- Rechazar -->
-                                        <button class="btn btn-danger-outline btn-xs"
-                                                data-modal-open="modal-reject"
-                                                data-reservation-id="@res.Id"
-                                                data-reservation-code="@res.ReservationCode">
-                                            Rechazar
-                                        </button>
+                                            <!-- Rechazar -->
+                                            <button class="btn btn-danger-outline btn-xs"
+                                                    data-modal-open="modal-reject"
+                                                    data-reservation-id="@res.Id"
+                                                    data-reservation-code="@res.ReservationCode">
+                                                Rechazar
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:12px; color:var(--text-muted); font-style:italic;">En revisión</span>
+                                        }
                                     }
                                     else if (res.Status == "Aprobada" || res.Status == "Confirmada")
                                     {

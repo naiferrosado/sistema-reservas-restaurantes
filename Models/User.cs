@@ -7,6 +7,9 @@ namespace SistemaReservas.Models
         public string PasswordHash { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string Role { get; set; } = "Administrador";
+        public bool IsActive { get; set; } = true;
+        public string? ResetToken { get; set; }
+        public DateTime? ResetTokenExpiresAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

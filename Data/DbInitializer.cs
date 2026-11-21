@@ -21,22 +21,74 @@ namespace SistemaReservas.Data
                         ""Role"" VARCHAR(50) NOT NULL,
                         ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL
                     );
+                    ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE;
+                    ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""ResetToken"" VARCHAR(200) NULL;
+                    ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""ResetTokenExpiresAt"" TIMESTAMP WITHOUT TIME ZONE NULL;
                 ");
 
-                if (!context.Users.Any())
+                var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
+
+                // Sembrar o actualizar administrador general inicial
+                var adminUser = context.Users.FirstOrDefault(u => u.Email.ToLower() == "admin@sistemareservas.com");
+                if (adminUser == null)
                 {
-                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
-                    var adminUser = new User
+                    adminUser = new User
                     {
                         Email = "admin@sistemareservas.com",
                         FullName = "Administrador General",
                         Role = "Administrador",
+                        IsActive = true,
                         PasswordHash = hasher.HashPassword("admin@sistemareservas.com", "Admin123!"),
                         CreatedAt = DateTime.UtcNow
                     };
                     context.Users.Add(adminUser);
-                    context.SaveChanges();
                 }
+                else
+                {
+                    adminUser.IsActive = true;
+                }
+
+                // Sembrar usuarios de prueba con roles operativos para validación
+                if (!context.Users.Any(u => u.Email.ToLower() == "gerente@sistemareservas.com"))
+                {
+                    context.Users.Add(new User
+                    {
+                        Email = "gerente@sistemareservas.com",
+                        FullName = "Carlos Encarnación (Gerente)",
+                        Role = "Gerente / Encargado",
+                        IsActive = true,
+                        PasswordHash = hasher.HashPassword("gerente@sistemareservas.com", "Gerente123!"),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                if (!context.Users.Any(u => u.Email.ToLower() == "recepcion@sistemareservas.com"))
+                {
+                    context.Users.Add(new User
+                    {
+                        Email = "recepcion@sistemareservas.com",
+                        FullName = "Laura Méndez (Anfitriona)",
+                        Role = "Anfitrión / Recepcionista",
+                        IsActive = true,
+                        PasswordHash = hasher.HashPassword("recepcion@sistemareservas.com", "Recepcion123!"),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                if (!context.Users.Any(u => u.Email.ToLower() == "mesero@sistemareservas.com"))
+                {
+                    context.Users.Add(new User
+                    {
+                        Email = "mesero@sistemareservas.com",
+                        FullName = "Miguel Batista (Personal Sala)",
+                        Role = "Mesero / Personal de Sala",
+                        IsActive = true,
+                        PasswordHash = hasher.HashPassword("mesero@sistemareservas.com", "Mesero123!"),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                context.SaveChanges();
             }
             catch
             {

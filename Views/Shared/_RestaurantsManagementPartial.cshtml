@@ -6,14 +6,17 @@
             <div class="card-title">Directorio de Restaurantes</div>
             <div class="card-subtitle">@Model.Restaurants.Count sucursales y marcas gastronómicas registradas en República Dominicana</div>
         </div>
-        <div>
-            <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Nuevo Restaurante
-            </button>
-        </div>
+        @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
+        {
+            <div>
+                <button type="button" class="btn btn-primary btn-sm" data-modal-open="modal-restaurant-create">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Nuevo Restaurante
+                </button>
+            </div>
+        }
     </div>
 
     @if (!Model.Restaurants.Any())
@@ -152,28 +155,31 @@
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                         </svg>
                                     </button>
-                                    @if (Model.Restaurants.Count > 1)
+                                    @if (User.IsInRole("Administrador") || User.IsInRole("Gerente / Encargado"))
                                     {
-                                        <button type="button" class="btn btn-secondary btn-sm btn-icon"
-                                                data-modal-open="modal-restaurant-delete"
-                                                data-restaurant-id="@r.Id"
-                                                data-restaurant-name="@r.Name"
-                                                style="color:var(--status-rechazada-text);"
-                                                title="Eliminar restaurante">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                            </svg>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:0.35; cursor:not-allowed;" title="No es posible eliminar el único restaurante del sistema">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                            </svg>
-                                        </button>
+                                        if (Model.Restaurants.Count > 1)
+                                        {
+                                            <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                                                    data-modal-open="modal-restaurant-delete"
+                                                    data-restaurant-id="@r.Id"
+                                                    data-restaurant-name="@r.Name"
+                                                    style="color:var(--status-rechazada-text);"
+                                                    title="Eliminar restaurante">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:0.35; cursor:not-allowed;" title="No es posible eliminar el único restaurante del sistema">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        }
                                     }
                                 </div>
                             </td>

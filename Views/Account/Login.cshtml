@@ -56,7 +56,7 @@
                 </div>
 
                 <!-- Campo Contraseña -->
-                <div class="form-group" style="margin-bottom: 20px;">
+                <div class="form-group" style="margin-bottom: 18px;">
                     <label asp-for="Password" class="form-label required"></label>
                     <div style="position: relative;">
                         <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex;">
@@ -66,17 +66,29 @@
                         </span>
                         <input asp-for="Password" class="form-control" id="input-password"
                                placeholder="••••••••"
-                               style="padding-left: 38px;" />
+                               style="padding-left: 38px; padding-right: 38px;" />
+                        <button type="button" onclick="togglePasswordVisibility('input-password', 'eye-icon-login')" 
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center;"
+                                title="Mostrar u ocultar contraseña">
+                            <svg id="eye-icon-login" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
                     </div>
                     <span asp-validation-for="Password" class="field-validation-error"></span>
                 </div>
 
-                <!-- Recordar sesión -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                <!-- Recordar sesión y Recuperar Contraseña -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-secondary); cursor: pointer; user-select: none; margin: 0;">
                         <input asp-for="RememberMe" type="checkbox" style="width: 16px; height: 16px; accent-color: var(--brand-primary); cursor: pointer;" />
                         <span>Recordar sesión en este equipo</span>
                     </label>
+                    <a href="javascript:void(0)" onclick="openForgotPasswordModal()" 
+                       style="font-size: 13px; color: var(--brand-primary); text-decoration: none; font-weight: 600;"
+                       title="Recupera el acceso a tu cuenta si olvidaste tu clave">
+                        ¿Olvidaste tu contraseña?
+                    </a>
                 </div>
 
                 <!-- Botón de Envío -->
@@ -103,3 +115,87 @@
     </div>
 
 </div>
+
+<!-- MODAL: RECUPERAR CONTRASEÑA -->
+<div class="modal-overlay" id="modal-forgot-password" style="display: none;">
+    <div class="modal modal-sm" style="max-width: 440px;">
+        <div class="modal-header">
+            <span class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-primary);">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Recuperar Contraseña
+            </span>
+            <button type="button" class="modal-close" onclick="closeForgotPasswordModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form asp-controller="Account" asp-action="ForgotPassword" method="post" id="forgot-password-modal-form">
+            @Html.AntiForgeryToken()
+            <div class="modal-body" style="padding: 24px;">
+                <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 20px;">
+                    Ingresa el correo electrónico registrado con tu cuenta administrativa. Te enviaremos un enlace seguro con vigencia de 30 minutos para crear una nueva clave.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label required">Correo electrónico registrado</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                        </span>
+                        <input type="email" name="Email" class="form-control" id="forgot-modal-email"
+                               placeholder="admin@sistemareservas.com" required
+                               style="padding-left: 38px;" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="gap: 10px;">
+                <button type="button" class="btn btn-secondary" onclick="closeForgotPasswordModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Enviar Enlace
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openForgotPasswordModal() {
+    var emailInput = document.getElementById('input-email');
+    var forgotEmailInput = document.getElementById('forgot-modal-email');
+    if (emailInput && emailInput.value && forgotEmailInput) {
+        forgotEmailInput.value = emailInput.value.trim();
+    }
+    var modal = document.getElementById('modal-forgot-password');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (forgotEmailInput) forgotEmailInput.focus();
+    }
+}
+
+function closeForgotPasswordModal() {
+    var modal = document.getElementById('modal-forgot-password');
+    if (modal) modal.style.display = 'none';
+}
+
+function togglePasswordVisibility(inputId, iconId) {
+    var input = document.getElementById(inputId);
+    var icon = document.getElementById(iconId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) {
+            icon.innerHTML = '<path d="m2 2 20 20"/><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>';
+        }
+    } else {
+        input.type = 'password';
+        if (icon) {
+            icon.innerHTML = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
+        }
+    }
+}
+</script>

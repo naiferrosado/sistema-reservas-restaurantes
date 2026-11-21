@@ -37,5 +37,8 @@ namespace SistemaReservas.ViewModels
         // Gestión de Menú
         public List<MenuItem> MenuItems { get; set; } = new();
         public Dictionary<string, List<MenuItem>> MenuByCategory { get; set; } = new();
+
+        // Gestión de Usuarios
+        public List<User> Users { get; set; } = new();
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaReservas.Data;
@@ -44,6 +45,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<ActionResult<Restaurant>> CreateRestaurant([FromBody] SistemaReservas.DTOs.CreateRestaurantDto dto)
         {
             var restaurant = new Restaurant
@@ -71,6 +73,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> UpdateRestaurant(int id, [FromBody] SistemaReservas.DTOs.CreateRestaurantDto dto)
         {
             var restaurant = await _context.Restaurants.FindAsync(id);
@@ -96,6 +99,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
             var count = await _context.Restaurants.CountAsync();
