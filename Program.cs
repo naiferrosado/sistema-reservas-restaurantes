@@ -16,6 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Inyección de dependencias
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddSingleton<ILoginRateLimiter, LoginRateLimiter>();
 
 // Autenticación por Cookies para el panel administrativo
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)

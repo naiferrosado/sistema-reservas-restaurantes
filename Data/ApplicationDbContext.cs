@@ -78,6 +78,7 @@ namespace SistemaReservas.Data
                 entity.Property(e => e.PasswordHash).IsRequired();
                 entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.FailedLoginAttempts).HasDefaultValue(0);
                 entity.Property(e => e.ResetToken).HasMaxLength(200);
             });
         }

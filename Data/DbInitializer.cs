@@ -22,6 +22,7 @@ namespace SistemaReservas.Data
                         ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL
                     );
                     ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE;
+                    ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""FailedLoginAttempts"" INTEGER NOT NULL DEFAULT 0;
                     ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""ResetToken"" VARCHAR(200) NULL;
                     ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""ResetTokenExpiresAt"" TIMESTAMP WITHOUT TIME ZONE NULL;
                 ");

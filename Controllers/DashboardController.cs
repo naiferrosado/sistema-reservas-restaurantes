@@ -258,6 +258,10 @@ namespace SistemaReservas.Controllers
             user.Email = cleanEmail;
             user.Role = role.Trim();
             user.IsActive = isActive;
+            if (isActive)
+            {
+                user.FailedLoginAttempts = 0;
+            }
 
             await _context.SaveChangesAsync();
 
@@ -282,6 +286,10 @@ namespace SistemaReservas.Controllers
             }
 
             user.IsActive = !user.IsActive;
+            if (user.IsActive)
+            {
+                user.FailedLoginAttempts = 0;
+            }
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"El usuario \"{user.FullName}\" ahora está {(user.IsActive ? "Activo" : "Inactivo")}.";
@@ -308,6 +316,8 @@ namespace SistemaReservas.Controllers
                 user.PasswordHash = hasher.HashPassword(user.Email, newPassword.Trim());
                 user.ResetToken = null;
                 user.ResetTokenExpiresAt = null;
+                user.FailedLoginAttempts = 0;
+                user.IsActive = true;
                 await _context.SaveChangesAsync();
             }
 

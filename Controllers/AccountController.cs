@@ -15,15 +15,21 @@ namespace SistemaReservas.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly ILoginRateLimiter _rateLimiter;
         private readonly ILogger<AccountController> _logger;
+
+        private static readonly PasswordHasher<string> _dummyHasher = new();
+        private static readonly string _dummyHash = _dummyHasher.HashPassword("security_timing_protection@internal.local", "DummyTimingSecret123!");
 
         public AccountController(
             ApplicationDbContext context,
             IEmailService emailService,
+            ILoginRateLimiter rateLimiter,
             ILogger<AccountController> logger)
         {
             _context = context;
             _emailService = emailService;
+            _rateLimiter = rateLimiter;
             _logger = logger;
         }
 
@@ -55,24 +61,108 @@ namespace SistemaReservas.Controllers
                 return View(model);
             }
 
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+            // 1. CAPA DE SEGURIDAD: Rate Limiting por IP (Protege la Base de Datos contra saturación/DoS)
+            // Se valida en memoria RAM antes de realizar cualquier consulta SQL
+            var (isIpBlocked, retryAfter) = _rateLimiter.CheckIpThrottled(ipAddress);
+            if (isIpBlocked && retryAfter.HasValue)
+            {
+                var minutes = Math.Max(1, (int)Math.Ceiling(retryAfter.Value.TotalMinutes));
+                ModelState.AddModelError("", $"Demasiados intentos fallidos detectados desde esta red. Por seguridad del servidor y protección de la base de datos, el acceso se encuentra suspendido temporalmente por {minutes} minuto(s).");
+                return View(model);
+            }
+
             var cleanEmail = model.Email.Trim().ToLowerInvariant();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
 
             bool isValid = false;
             var hasher = new PasswordHasher<string>();
 
-            if (user != null)
+            // 2. CAPA DE SEGURIDAD: Usuario no existente -> Anti-Enumeración y Anti-Timing Attack
+            if (user == null)
             {
-                if (!user.IsActive)
+                // Ejecución criptográfica dummy para que el tiempo de respuesta sea idéntico al de un usuario existente
+                _dummyHasher.VerifyHashedPassword("security_timing_protection@internal.local", _dummyHash, model.Password);
+
+                var (isNowBlocked, failedCount, remainingAttempts, lockDuration) = _rateLimiter.RecordFailedAttempt(ipAddress);
+                if (isNowBlocked)
+                {
+                    var mins = lockDuration.HasValue ? (int)lockDuration.Value.TotalMinutes : 10;
+                    ModelState.AddModelError("", $"Has superado el límite de intentos fallidos. Tu acceso ha sido bloqueado temporalmente por {mins} minutos.");
+                }
+                else
+                {
+                    // Mensaje idéntico al de usuario existente para evitar enumeración de cuentas
+                    ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {remainingAttempts} intento(s) antes del bloqueo por seguridad.");
+                }
+                return View(model);
+            }
+
+            // 3. CAPA DE SEGURIDAD: Cuenta inactiva o bloqueada
+            if (!user.IsActive)
+            {
+                if (user.FailedLoginAttempts >= 5)
+                {
+                    ModelState.AddModelError("", "Esta cuenta ha sido bloqueada por seguridad tras exceder el número máximo de intentos fallidos. Comunícate con un administrador.");
+                }
+                else
                 {
                     ModelState.AddModelError("", "Esta cuenta se encuentra inactiva. Comunícate con el administrador del sistema.");
+                }
+                return View(model);
+            }
+
+            // 4. Verificación de contraseña para usuario activo
+            var verifyResult = hasher.VerifyHashedPassword(cleanEmail, user.PasswordHash, model.Password);
+            if (verifyResult == PasswordVerificationResult.Success || verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                isValid = true;
+                _rateLimiter.ResetAttempts(ipAddress);
+                if (user.FailedLoginAttempts > 0)
+                {
+                    user.FailedLoginAttempts = 0;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // Contraseña incorrecta
+                var (isNowBlocked, failedCount, ipRemaining, lockDuration) = _rateLimiter.RecordFailedAttempt(ipAddress);
+                bool isAdministrative = user.Role == "Administrador" || user.Role == "Gerente / Encargado";
+
+                if (isNowBlocked)
+                {
+                    var mins = lockDuration.HasValue ? (int)lockDuration.Value.TotalMinutes : 10;
+                    ModelState.AddModelError("", $"Has superado el límite de intentos fallidos. Tu acceso ha sido bloqueado temporalmente por {mins} minutos.");
                     return View(model);
                 }
 
-                var verifyResult = hasher.VerifyHashedPassword(cleanEmail, user.PasswordHash, model.Password);
-                if (verifyResult == PasswordVerificationResult.Success || verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
+                if (!isAdministrative)
                 {
-                    isValid = true;
+                    user.FailedLoginAttempts++;
+                    if (user.FailedLoginAttempts >= 5)
+                    {
+                        user.IsActive = false;
+                        await _context.SaveChangesAsync();
+                        _logger.LogWarning("Cuenta operativa bloqueada por 5 intentos fallidos consecutivos: {Email}", user.Email);
+                        ModelState.AddModelError("", "Tu cuenta ha sido desactivada y bloqueada por seguridad tras 5 intentos fallidos consecutivos. Contacta a un administrador para reactivarla.");
+                        return View(model);
+                    }
+                    else
+                    {
+                        await _context.SaveChangesAsync();
+                        int accountRemaining = 5 - user.FailedLoginAttempts;
+                        int effectiveRemaining = Math.Min(accountRemaining, ipRemaining);
+                        ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {effectiveRemaining} intento(s) antes del bloqueo por seguridad.");
+                        return View(model);
+                    }
+                }
+                else
+                {
+                    // Usuarios administrativos exentos de bloqueo de cuenta
+                    ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {ipRemaining} intento(s) antes del bloqueo por seguridad.");
+                    return View(model);
                 }
             }
 
@@ -80,6 +170,7 @@ namespace SistemaReservas.Controllers
             if (!isValid && cleanEmail == "admin@sistemareservas.com" && model.Password == "Admin123!")
             {
                 isValid = true;
+                _rateLimiter.ResetAttempts(ipAddress);
                 if (user == null)
                 {
                     user = new User
