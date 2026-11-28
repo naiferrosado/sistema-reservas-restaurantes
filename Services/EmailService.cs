@@ -21,8 +21,12 @@ namespace SistemaReservas.Services
 
         public async Task SendReservationReceivedAsync(Reservation reservation)
         {
-            var restaurantName = reservation.Restaurant?.Name ?? "Restaurante";
-            var subject = $"Solicitud de Reserva Recibida en {restaurantName} — Código: {reservation.ReservationCode}";
+            var restaurantName = WebUtility.HtmlEncode(reservation.Restaurant?.Name ?? "Restaurante");
+            var customerName = WebUtility.HtmlEncode(reservation.CustomerName);
+            var reservationCode = WebUtility.HtmlEncode(reservation.ReservationCode);
+            var address = WebUtility.HtmlEncode(reservation.Restaurant?.Address ?? "");
+            var time = WebUtility.HtmlEncode(reservation.ReservationTime);
+            var subject = $"Solicitud de Reserva Recibida en {reservation.Restaurant?.Name ?? "Restaurante"} — Código: {reservation.ReservationCode}";
 
             var bodyHtml = $@"<!DOCTYPE html>
 <html lang='es'>
@@ -62,12 +66,12 @@ namespace SistemaReservas.Services
         <div class='status-badge'>Estado: Pendiente de Aprobación</div>
       </div>
       <div class='content'>
-        <p class='greeting'>Hola, {reservation.CustomerName}</p>
+        <p class='greeting'>Hola, {customerName}</p>
         <p class='intro'>Gracias por preferirnos. Tu solicitud ha sido registrada exitosamente en nuestro sistema y está siendo evaluada por el equipo de sala. Te notificaremos a este mismo correo en cuanto sea aprobada.</p>
 
         <div class='code-box'>
           <div class='code-label'>Código de Solicitud</div>
-          <div class='code-value'>{reservation.ReservationCode}</div>
+          <div class='code-value'>{reservationCode}</div>
         </div>
 
         <div class='details-box'>
@@ -81,7 +85,7 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Hora solicitada</span>
-            <span class='detail-value'>{reservation.ReservationTime} hrs</span>
+            <span class='detail-value'>{time} hrs</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Comensales</span>
@@ -89,7 +93,7 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Dirección</span>
-            <span class='detail-value'>{reservation.Restaurant?.Address ?? ""}</span>
+            <span class='detail-value'>{address}</span>
           </div>
         </div>
 
@@ -108,12 +112,20 @@ namespace SistemaReservas.Services
 
         public async Task SendReservationConfirmationAsync(Reservation reservation)
         {
-            var restaurantName = reservation.Restaurant?.Name ?? "Restaurante";
-            var tableText = reservation.Table != null
+            var rawRestaurantName = reservation.Restaurant?.Name ?? "Restaurante";
+            var restaurantName = WebUtility.HtmlEncode(rawRestaurantName);
+            var customerName = WebUtility.HtmlEncode(reservation.CustomerName);
+            var reservationCode = WebUtility.HtmlEncode(reservation.ReservationCode);
+            var time = WebUtility.HtmlEncode(reservation.ReservationTime);
+            var address = WebUtility.HtmlEncode(reservation.Restaurant?.Address ?? "Ver en nuestra web");
+            var footerAddress = WebUtility.HtmlEncode(reservation.Restaurant?.Address ?? "");
+            var phone = WebUtility.HtmlEncode(reservation.Restaurant?.Phone ?? "N/A");
+            var specialRequests = WebUtility.HtmlEncode(reservation.SpecialRequests ?? "");
+            var tableText = WebUtility.HtmlEncode(reservation.Table != null
                 ? $"Mesa {reservation.Table.TableNumber} ({reservation.Table.Location})"
-                : "Mesa asignada al llegar";
+                : "Mesa asignada al llegar");
 
-            var subject = $"Reserva Aprobada en {restaurantName} — Codigo: {reservation.ReservationCode}";
+            var subject = $"Reserva Aprobada en {rawRestaurantName} — Codigo: {reservation.ReservationCode}";
 
             var bodyHtml = $@"<!DOCTYPE html>
 <html lang='es'>
@@ -154,12 +166,12 @@ namespace SistemaReservas.Services
         <div class='status-badge'>Estado: Aprobada</div>
       </div>
       <div class='content'>
-        <p class='greeting'>Hola, {reservation.CustomerName}</p>
+        <p class='greeting'>Hola, {customerName}</p>
         <p class='intro'>Nos complace informarte que tu solicitud de reserva ha sido <strong>confirmada y aprobada</strong>. Tu mesa estara lista para tu llegada en la fecha y hora indicadas a continuacion.</p>
 
         <div class='code-box'>
           <div class='code-label'>Codigo de Reserva</div>
-          <div class='code-value'>{reservation.ReservationCode}</div>
+          <div class='code-value'>{reservationCode}</div>
         </div>
 
         <div class='details-box'>
@@ -173,7 +185,7 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Hora</span>
-            <span class='detail-value'>{reservation.ReservationTime} hrs</span>
+            <span class='detail-value'>{time} hrs</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Comensales</span>
@@ -185,12 +197,12 @@ namespace SistemaReservas.Services
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Direccion</span>
-            <span class='detail-value'>{reservation.Restaurant?.Address ?? "Ver en nuestra web"}</span>
+            <span class='detail-value'>{address}</span>
           </div>
           {(string.IsNullOrWhiteSpace(reservation.SpecialRequests) ? "" : $@"
           <div class='detail-row'>
             <span class='detail-label'>Peticiones especiales</span>
-            <span class='detail-value'>{reservation.SpecialRequests}</span>
+            <span class='detail-value'>{specialRequests}</span>
           </div>")}
         </div>
 
@@ -200,7 +212,7 @@ namespace SistemaReservas.Services
       </div>
       <div class='footer'>
         <p>Sistema Automatizado de Reservas &bull; {restaurantName}</p>
-        <p>{reservation.Restaurant?.Address ?? ""} | Tel: {reservation.Restaurant?.Phone ?? "N/A"}</p>
+        <p>{footerAddress} | Tel: {phone}</p>
       </div>
     </div>
   </div>
@@ -212,8 +224,15 @@ namespace SistemaReservas.Services
 
         public async Task SendReservationRejectionAsync(Reservation reservation, string? reason)
         {
-            var restaurantName = reservation.Restaurant?.Name ?? "Restaurante";
-            var subject = $"Actualizacion sobre tu solicitud en {restaurantName} — {reservation.ReservationCode}";
+            var rawRestaurantName = reservation.Restaurant?.Name ?? "Restaurante";
+            var restaurantName = WebUtility.HtmlEncode(rawRestaurantName);
+            var customerName = WebUtility.HtmlEncode(reservation.CustomerName);
+            var reservationCode = WebUtility.HtmlEncode(reservation.ReservationCode);
+            var time = WebUtility.HtmlEncode(reservation.ReservationTime);
+            var safeReason = WebUtility.HtmlEncode(reason ?? "Aforo completo para el horario solicitado.");
+            var phone = WebUtility.HtmlEncode(reservation.Restaurant?.Phone ?? "N/A");
+            var address = WebUtility.HtmlEncode(reservation.Restaurant?.Address ?? "");
+            var subject = $"Actualizacion sobre tu solicitud en {rawRestaurantName} — {reservation.ReservationCode}";
 
             var bodyHtml = $@"<!DOCTYPE html>
 <html lang='es'>
@@ -246,25 +265,25 @@ namespace SistemaReservas.Services
       <div class='header'>
         <div class='header-restaurant'>{restaurantName}</div>
         <h1 class='header-title'>Actualizacion de Reserva</h1>
-        <div class='header-code'>{reservation.ReservationCode}</div>
+        <div class='header-code'>{reservationCode}</div>
       </div>
       <div class='content'>
-        <p style='font-size:14px; color:#0F172A;'>Estimado/a <strong>{reservation.CustomerName}</strong>,</p>
-        <p style='font-size:14px; color:#475569; line-height:1.6;'>Lamentamos informarte que, en esta ocasion, no ha sido posible confirmar tu solicitud de reserva para el <strong>{reservation.ReservationDate:dd/MM/yyyy}</strong> a las <strong>{reservation.ReservationTime}</strong> hrs.</p>
+        <p style='font-size:14px; color:#0F172A;'>Estimado/a <strong>{customerName}</strong>,</p>
+        <p style='font-size:14px; color:#475569; line-height:1.6;'>Lamentamos informarte que, en esta ocasion, no ha sido posible confirmar tu solicitud de reserva para el <strong>{reservation.ReservationDate:dd/MM/yyyy}</strong> a las <strong>{time}</strong> hrs.</p>
 
         <div class='reason-box'>
           <div class='reason-label'>Motivo</div>
-          <div class='reason-text'>{reason ?? "Aforo completo para el horario solicitado."}</div>
+          <div class='reason-text'>{safeReason}</div>
         </div>
 
         <div class='details-box'>
           <div class='detail-row'>
             <span class='detail-label'>Codigo de solicitud</span>
-            <span class='detail-value' style='font-family:monospace;'>{reservation.ReservationCode}</span>
+            <span class='detail-value' style='font-family:monospace;'>{reservationCode}</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Fecha solicitada</span>
-            <span class='detail-value'>{reservation.ReservationDate:dd/MM/yyyy} a las {reservation.ReservationTime}</span>
+            <span class='detail-value'>{reservation.ReservationDate:dd/MM/yyyy} a las {time}</span>
           </div>
           <div class='detail-row'>
             <span class='detail-label'>Comensales</span>
@@ -272,11 +291,11 @@ namespace SistemaReservas.Services
           </div>
         </div>
 
-        <p style='font-size:14px; color:#475569; line-height:1.6;'>Te invitamos a elegir otro horario o fecha disponible a traves de nuestra plataforma. Puedes contactarnos directamente en <strong>{reservation.Restaurant?.Phone ?? "N/A"}</strong>.</p>
+        <p style='font-size:14px; color:#475569; line-height:1.6;'>Te invitamos a elegir otro horario o fecha disponible a traves de nuestra plataforma. Puedes contactarnos directamente en <strong>{phone}</strong>.</p>
       </div>
       <div class='footer'>
         <p>Sistema Automatizado de Reservas &bull; {restaurantName}</p>
-        <p>{reservation.Restaurant?.Address ?? ""}</p>
+        <p>{address}</p>
       </div>
     </div>
   </div>
@@ -289,6 +308,8 @@ namespace SistemaReservas.Services
         public async Task SendPasswordResetAsync(string email, string fullName, string resetLink, int expirationMinutes = 30)
         {
             var subject = "Recuperación de Contraseña — Sistema de Reservas";
+            var safeName = WebUtility.HtmlEncode(fullName);
+            var safeLink = WebUtility.HtmlEncode(resetLink);
 
             var bodyHtml = $@"<!DOCTYPE html>
 <html lang='es'>
@@ -320,11 +341,11 @@ namespace SistemaReservas.Services
         <h1 class='header-title'>Recuperación de Contraseña</h1>
       </div>
       <div class='content'>
-        <p class='greeting'>Hola, {fullName}</p>
+        <p class='greeting'>Hola, {safeName}</p>
         <p class='intro'>Hemos recibido una solicitud para restablecer la contraseña asociada a tu cuenta administrativa en el <strong>Sistema de Reservas</strong>. Para crear una nueva contraseña, haz clic en el siguiente botón:</p>
 
         <div class='btn-container'>
-          <a href='{resetLink}' class='btn' target='_blank'>Restablecer Contraseña</a>
+          <a href='{safeLink}' class='btn' target='_blank'>Restablecer Contraseña</a>
         </div>
 
         <div class='notice'>
@@ -335,7 +356,7 @@ namespace SistemaReservas.Services
 
         <div class='link-alt'>
           Si el botón no funciona, copia y pega este enlace en tu navegador:<br/>
-          <a href='{resetLink}' style='color:#102542;'>{resetLink}</a>
+          <a href='{safeLink}' style='color:#102542;'>{safeLink}</a>
         </div>
       </div>
       <div class='footer'>
@@ -346,7 +367,7 @@ namespace SistemaReservas.Services
 </body>
 </html>";
 
-            await RecordAndOptionallySendDirectAsync(email, fullName, subject, bodyHtml);
+            await RecordAndOptionallySendDirectAsync(email, fullName, subject, bodyHtml, logBodyHtml: false);
         }
 
         private async Task RecordAndOptionallySendAsync(Reservation reservation, string subject, string bodyHtml)
@@ -366,7 +387,8 @@ namespace SistemaReservas.Services
             string subject,
             string bodyHtml,
             int? reservationId = null,
-            string? senderName = null)
+            string? senderName = null,
+            bool logBodyHtml = true)
         {
             var status = "Enviado (Simulación)";
 
@@ -422,7 +444,7 @@ namespace SistemaReservas.Services
                 RecipientEmail = recipientEmail,
                 RecipientName = recipientName,
                 Subject = subject,
-                BodyHtml = bodyHtml,
+                BodyHtml = logBodyHtml ? bodyHtml : "<p>Enlace de recuperación enviado de forma confidencial (contenido oculto por seguridad).</p>",
                 Status = status,
                 SentAt = DateTimeHelper.Now
             };

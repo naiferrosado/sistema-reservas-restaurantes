@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaReservas.Data;
@@ -8,6 +9,7 @@ namespace SistemaReservas.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TablesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -30,6 +32,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<ActionResult<RestaurantTable>> CreateTable([FromBody] CreateTableDto dto)
         {
             var restaurant = await _context.Restaurants.FindAsync(dto.RestaurantId);
@@ -54,6 +57,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> UpdateTable(int id, [FromBody] CreateTableDto dto)
         {
             var table = await _context.Tables.FindAsync(id);
@@ -107,6 +111,7 @@ namespace SistemaReservas.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado")]
         public async Task<IActionResult> DeleteTable(int id)
         {
             var table = await _context.Tables.FindAsync(id);

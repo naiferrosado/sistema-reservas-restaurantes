@@ -30,7 +30,37 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
         options.Cookie.Name = "SistemaReservas.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.IsEssential = true;
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
+
+// Protección CSRF en cookies Antiforgery
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 
 // MVC con Vistas Razor + soporte JSON para controladores API
 builder.Services.AddControllersWithViews()
@@ -39,14 +69,19 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// Configuración de CORS
+// Configuración de CORS restrictiva (solo orígenes configurados; sin wildcard público)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("RestrictedCors", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedOrigins != null && allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -75,15 +110,37 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Swagger UI siempre accesible
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (!app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sistema Reservas API v1");
-    c.RoutePrefix = "swagger";
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+else
+{
+    // Swagger UI solo en entorno de desarrollo
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sistema Reservas API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
+
+// Cabeceras de seguridad HTTP
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "SAMEORIGIN";
+    headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    headers["X-XSS-Protection"] = "0";
+    headers["Content-Security-Policy"] = "frame-ancestors 'self'; object-src 'none'; base-uri 'self';";
+    await next();
 });
 
-app.UseCors("AllowAll");
+app.UseCors("RestrictedCors");
 
 // Archivos estáticos (CSS, JS, imágenes)
 app.UseStaticFiles();

@@ -9,9 +9,9 @@ namespace SistemaReservas.ViewModels
         [Display(Name = "Correo electronico")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La contrasena es obligatoria.")]
+        [Required(ErrorMessage = "La contraseña es obligatoria.")]
         [DataType(DataType.Password)]
-        [Display(Name = "Contrasena")]
+        [Display(Name = "Contraseña")]
         public string Password { get; set; } = string.Empty;
 
         [Display(Name = "Recordar sesion en este equipo")]

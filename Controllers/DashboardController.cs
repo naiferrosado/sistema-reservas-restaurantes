@@ -15,6 +15,85 @@ namespace SistemaReservas.Controllers
         private readonly IEmailService _emailService;
         private readonly ILogger<DashboardController> _logger;
 
+        private static readonly HashSet<string> ValidRoles = new(StringComparer.Ordinal)
+        {
+            "Administrador",
+            "Gerente / Encargado",
+            "Anfitrión / Recepcionista",
+            "Mesero / Personal de Sala"
+        };
+
+        private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp"
+        };
+
+        private const long MaxImageFileBytes = 5 * 1024 * 1024; // 5 MB
+
+        private string GetCurrentRole() =>
+            User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+
+        private static bool CanManageTargetRole(string currentRole, string targetRole)
+        {
+            if (currentRole == "Administrador") return true;
+            if (currentRole == "Gerente / Encargado") return targetRole != "Administrador";
+            return false;
+        }
+
+        private static bool IsSafeImageUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return true;
+            var trimmed = url.Trim();
+            if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)) return true;
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            {
+                return uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp;
+            }
+            return false;
+        }
+
+        private async Task<(bool Success, string? Url, string? ErrorMessage)> SaveValidatedDishImageAsync(IFormFile imageFile)
+        {
+            if (imageFile.Length <= 0)
+                return (false, null, "El archivo de imagen está vacío.");
+
+            if (imageFile.Length > MaxImageFileBytes)
+                return (false, null, "La imagen no puede superar los 5 MB.");
+
+            var ext = Path.GetExtension(imageFile.FileName);
+            if (string.IsNullOrWhiteSpace(ext) || !AllowedImageExtensions.Contains(ext))
+                return (false, null, "Formato de imagen no permitido. Solo se aceptan JPG, PNG o WEBP.");
+
+            // Verificar firma binaria (magic bytes) para evitar archivos renombrados maliciosos
+            using var ms = new MemoryStream();
+            await imageFile.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            if (!HasValidImageSignature(bytes, ext))
+                return (false, null, "El contenido del archivo no corresponde a una imagen válida.");
+
+            var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "dishes");
+            if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
+
+            var fileName = $"{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+            var filePath = Path.Combine(uploadsDir, fileName);
+            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+
+            return (true, $"/uploads/dishes/{fileName}", null);
+        }
+
+        private static bool HasValidImageSignature(byte[] bytes, string ext)
+        {
+            if (bytes.Length < 12) return false;
+            return ext.ToLowerInvariant() switch
+            {
+                ".jpg" or ".jpeg" => bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+                ".png" => bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47,
+                ".webp" => bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 &&
+                           bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50,
+                _ => false
+            };
+        }
+
         public DashboardController(
             ApplicationDbContext context,
             IEmailService emailService,
@@ -114,12 +193,14 @@ namespace SistemaReservas.Controllers
                 .GroupBy(t => t.Location)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Bandeja de correos
-            var notifications = await _context.Notifications
-                .Where(n => n.ReservationId != null || n.Subject.Contains("Contraseña"))
-                .OrderByDescending(n => n.SentAt)
-                .Take(50)
-                .ToListAsync();
+            // Bandeja de correos (solo para roles con acceso)
+            var notifications = currentRole != "Mesero / Personal de Sala"
+                ? await _context.Notifications
+                    .Where(n => n.ReservationId != null)
+                    .OrderByDescending(n => n.SentAt)
+                    .Take(50)
+                    .ToListAsync()
+                : new List<NotificationLog>();
 
             // Menú
             var menuItems = await _context.MenuItems
@@ -132,10 +213,12 @@ namespace SistemaReservas.Controllers
                 .GroupBy(m => m.Category)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Lista de usuarios (para el módulo de gestión)
-            var users = await _context.Users
-                .OrderBy(u => u.FullName)
-                .ToListAsync();
+            // Lista de usuarios (solo cargada para Administrador y Gerente)
+            var users = (currentRole == "Administrador" || currentRole == "Gerente / Encargado")
+                ? await _context.Users
+                    .OrderBy(u => u.FullName)
+                    .ToListAsync()
+                : new List<User>();
 
             var vm = new DashboardViewModel
             {
@@ -189,6 +272,27 @@ namespace SistemaReservas.Controllers
                 return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
             }
 
+            var targetRole = string.IsNullOrWhiteSpace(role) ? "Anfitrión / Recepcionista" : role.Trim();
+            if (!ValidRoles.Contains(targetRole))
+            {
+                TempData["ErrorMessage"] = "El rol seleccionado no es válido.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            if (!CanManageTargetRole(GetCurrentRole(), targetRole))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para crear usuarios con el rol Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var trimmedPassword = temporaryPassword.Trim();
+            var (isPwdValid, pwdError) = PasswordPolicy.Validate(trimmedPassword);
+            if (!isPwdValid)
+            {
+                TempData["ErrorMessage"] = pwdError;
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
             var cleanEmail = email.Trim().ToLowerInvariant();
             var exists = await _context.Users.AnyAsync(u => u.Email.ToLower() == cleanEmail);
             if (exists)
@@ -202,9 +306,9 @@ namespace SistemaReservas.Controllers
             {
                 FullName = fullName.Trim(),
                 Email = cleanEmail,
-                Role = string.IsNullOrWhiteSpace(role) ? "Anfitrión / Recepcionista" : role.Trim(),
+                Role = targetRole,
                 IsActive = isActive,
-                PasswordHash = hasher.HashPassword(cleanEmail, temporaryPassword.Trim()),
+                PasswordHash = hasher.HashPassword(cleanEmail, trimmedPassword),
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -232,9 +336,41 @@ namespace SistemaReservas.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
 
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para eliminar una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para cambiar el estado de una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var currentRole = GetCurrentRole();
+            if (!CanManageTargetRole(currentRole, user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para modificar una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
             if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
             {
                 TempData["ErrorMessage"] = "El nombre y el correo son obligatorios.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            var targetRole = string.IsNullOrWhiteSpace(role) ? user.Role : role.Trim();
+            if (!ValidRoles.Contains(targetRole))
+            {
+                TempData["ErrorMessage"] = "El rol seleccionado no es válido.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            if (!CanManageTargetRole(currentRole, targetRole))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para asignar el rol Administrador.";
                 return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
             }
 
@@ -250,13 +386,13 @@ namespace SistemaReservas.Controllers
             var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (currentUserId == id.ToString())
             {
-                role = user.Role;
+                targetRole = user.Role;
                 isActive = true;
             }
 
             user.FullName = fullName.Trim();
             user.Email = cleanEmail;
-            user.Role = role.Trim();
+            user.Role = targetRole;
             user.IsActive = isActive;
             if (isActive)
             {
@@ -277,6 +413,12 @@ namespace SistemaReservas.Controllers
         {
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
+
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para cambiar el estado de una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
 
             var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (currentUserId == id.ToString())
@@ -309,11 +451,25 @@ namespace SistemaReservas.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
 
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para restablecer la contraseña de un Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
-                user.PasswordHash = hasher.HashPassword(user.Email, newPassword.Trim());
+                var trimmedPassword = newPassword.Trim();
+                var (isPwdValid, pwdError) = PasswordPolicy.Validate(trimmedPassword);
+                if (!isPwdValid)
+                {
+                    TempData["ErrorMessage"] = pwdError;
+                    return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+                }
+
+                user.PasswordHash = hasher.HashPassword(user.Email.ToLowerInvariant(), trimmedPassword);
                 user.ResetToken = null;
                 user.ResetTokenExpiresAt = null;
                 user.FailedLoginAttempts = 0;
@@ -325,7 +481,7 @@ namespace SistemaReservas.Controllers
             {
                 var tokenBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
                 var token = Convert.ToHexString(tokenBytes).ToLowerInvariant();
-                user.ResetToken = token;
+                user.ResetToken = PasswordPolicy.HashToken(token);
                 user.ResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30);
                 await _context.SaveChangesAsync();
 
@@ -366,6 +522,18 @@ namespace SistemaReservas.Controllers
 
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
+
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para eliminar una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
+
+            if (!CanManageTargetRole(GetCurrentRole(), user.Role))
+            {
+                TempData["ErrorMessage"] = "No tienes permisos para cambiar el estado de una cuenta de Administrador.";
+                return RedirectToAction(nameof(Index), new { restaurantId, tab = "users" });
+            }
 
             var name = user.FullName;
             _context.Users.Remove(user);
@@ -562,31 +730,17 @@ namespace SistemaReservas.Controllers
                 return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
             }
 
-            string finalImageUrl = imageUrl?.Trim() ?? string.Empty;
+            string finalImageUrl = IsSafeImageUrl(imageUrl) ? (imageUrl?.Trim() ?? string.Empty) : string.Empty;
 
             if (imageFile != null && imageFile.Length > 0)
             {
-                try
+                var (success, savedUrl, uploadError) = await SaveValidatedDishImageAsync(imageFile);
+                if (!success)
                 {
-                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "dishes");
-                    if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
-
-                    var ext = Path.GetExtension(imageFile.FileName);
-                    if (string.IsNullOrEmpty(ext)) ext = ".jpg";
-                    var fileName = $"{Guid.NewGuid():N}{ext}";
-                    var filePath = Path.Combine(uploadsDir, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(stream);
-                    }
-
-                    finalImageUrl = $"/uploads/dishes/{fileName}";
+                    TempData["ErrorMessage"] = uploadError ?? "No se pudo procesar la imagen.";
+                    return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error al guardar imagen de platillo subida desde PC");
-                }
+                finalImageUrl = savedUrl!;
             }
 
             if (string.IsNullOrWhiteSpace(finalImageUrl))
@@ -665,29 +819,15 @@ namespace SistemaReservas.Controllers
 
             if (imageFile != null && imageFile.Length > 0)
             {
-                try
+                var (success, savedUrl, uploadError) = await SaveValidatedDishImageAsync(imageFile);
+                if (!success)
                 {
-                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "dishes");
-                    if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
-
-                    var ext = Path.GetExtension(imageFile.FileName);
-                    if (string.IsNullOrEmpty(ext)) ext = ".jpg";
-                    var fileName = $"{Guid.NewGuid():N}{ext}";
-                    var filePath = Path.Combine(uploadsDir, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(stream);
-                    }
-
-                    item.ImageUrl = $"/uploads/dishes/{fileName}";
+                    TempData["ErrorMessage"] = uploadError ?? "No se pudo procesar la imagen.";
+                    return RedirectToAction(nameof(Index), new { restaurantId, tab = "menu" });
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error al actualizar imagen desde PC");
-                }
+                item.ImageUrl = savedUrl!;
             }
-            else if (!string.IsNullOrWhiteSpace(imageUrl))
+            else if (!string.IsNullOrWhiteSpace(imageUrl) && IsSafeImageUrl(imageUrl))
             {
                 item.ImageUrl = imageUrl.Trim();
             }
@@ -995,7 +1135,6 @@ namespace SistemaReservas.Controllers
         // ENDPOINT API (para Swagger)
         // ===========================
 
-        [AllowAnonymous]
         [HttpGet]
         [Route("api/dashboard/stats")]
         public async Task<IActionResult> ApiGetStats([FromQuery] int? restaurantId)

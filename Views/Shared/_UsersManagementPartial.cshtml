@@ -184,7 +184,13 @@
                                 
                                 <!-- Botón Editar -->
                                 <button type="button" class="btn btn-secondary btn-xs"
-                                        onclick="openEditUserModal(@user.Id, '@Html.Raw(user.FullName.Replace("'", "\\'"))', '@user.Email', '@user.Role', @(user.IsActive ? "true" : "false"), @(isCurrentUser ? "true" : "false"))"
+                                        data-user-id="@user.Id"
+                                        data-user-fullname="@user.FullName"
+                                        data-user-email="@user.Email"
+                                        data-user-role="@user.Role"
+                                        data-user-active="@(user.IsActive ? "true" : "false")"
+                                        data-user-current="@(isCurrentUser ? "true" : "false")"
+                                        onclick="openEditUserModalFromBtn(this)"
                                         title="Editar usuario">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                     Editar
@@ -221,7 +227,10 @@
 
                                 <!-- Botón Restablecer Clave -->
                                 <button type="button" class="btn btn-secondary btn-xs"
-                                        onclick="openResetPasswordUserModal(@user.Id, '@Html.Raw(user.FullName.Replace("'", "\\'"))', '@user.Email')"
+                                        data-user-id="@user.Id"
+                                        data-user-fullname="@user.FullName"
+                                        data-user-email="@user.Email"
+                                        onclick="openResetPasswordUserModalFromBtn(this)"
                                         title="Restablecer clave de acceso">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                     Clave
@@ -296,7 +305,7 @@
                     </div>
                     <div style="position: relative;">
                         <input type="password" name="temporaryPassword" id="create-user-password" class="form-control"
-                               placeholder="Mínimo 6 caracteres" style="padding-right: 40px;" required />
+                               placeholder="Mínimo 8 caracteres (mayús., minús., número y símbolo)" minlength="8" style="padding-right: 40px;" required />
                         <button type="button" onclick="togglePasswordVisibility('create-user-password', 'eye-create-user')"
                                 style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex;"
                                 title="Mostrar u ocultar contraseña">
@@ -304,7 +313,7 @@
                         </button>
                     </div>
                     <span class="form-help" style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px; display: block;">
-                        El usuario podrá utilizar esta contraseña para iniciar sesión inmediatamente.
+                        Debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y símbolo.
                     </span>
                 </div>
 
@@ -500,6 +509,17 @@ function closeCreateUserModal() {
     if (modal) modal.style.display = 'none';
 }
 
+function openEditUserModalFromBtn(btn) {
+    openEditUserModal(
+        btn.dataset.userId,
+        btn.dataset.userFullname,
+        btn.dataset.userEmail,
+        btn.dataset.userRole,
+        btn.dataset.userActive === 'true',
+        btn.dataset.userCurrent === 'true'
+    );
+}
+
 function openEditUserModal(id, fullName, email, role, isActive, isCurrentUser) {
     document.getElementById('edit-user-id').value = id;
     document.getElementById('edit-user-fullname').value = fullName;
@@ -527,6 +547,14 @@ function closeEditUserModal() {
     if (modal) modal.style.display = 'none';
 }
 
+function openResetPasswordUserModalFromBtn(btn) {
+    openResetPasswordUserModal(
+        btn.dataset.userId,
+        btn.dataset.userFullname,
+        btn.dataset.userEmail
+    );
+}
+
 function openResetPasswordUserModal(id, fullName, email) {
     document.getElementById('reset-pwd-user-id').value = id;
     document.getElementById('reset-pwd-user-name').textContent = fullName;
@@ -543,15 +571,42 @@ function closeResetPasswordUserModal() {
 }
 
 function generateRandomPassword(targetInputId) {
-    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@@#$%&*";
-    var password = "";
-    for (var i = 0; i < 10; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    var upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    var lower = "abcdefghijkmnpqrstuvwxyz";
+    var digits = "23456789";
+    var special = "!@@#$%&*";
+    var all = upper + lower + digits + special;
+
+    function securePick(charset) {
+        var arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        return charset.charAt(arr[0] % charset.length);
     }
+
+    var chars = [
+        securePick(upper),
+        securePick(lower),
+        securePick(digits),
+        securePick(special)
+    ];
+    for (var i = chars.length; i < 12; i++) {
+        chars.push(securePick(all));
+    }
+    // Fisher-Yates shuffle criptográfico
+    for (var j = chars.length - 1; j > 0; j--) {
+        var rand = new Uint32Array(1);
+        window.crypto.getRandomValues(rand);
+        var k = rand[0] % (j + 1);
+        var tmp = chars[j];
+        chars[j] = chars[k];
+        chars[k] = tmp;
+    }
+
+    var password = chars.join('');
     var input = document.getElementById(targetInputId);
     if (input) {
         input.value = password;
-        input.type = 'text'; // Show it temporarily so admin can read/copy it
+        input.type = 'text';
     }
 }
 </script>

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaReservas.Data;
@@ -188,12 +189,13 @@ namespace SistemaReservas.Controllers
                 _logger.LogWarning(ex, "Error al enviar correo de recepción para reserva {Code}", reservation.ReservationCode);
             }
 
-            return RedirectToAction(nameof(Confirmation), new { id = reservation.Id });
+            TempData["ConfirmedReservationCode"] = reservation.ReservationCode;
+            return RedirectToAction(nameof(Confirmation), new { id = reservation.Id, code = reservation.ReservationCode });
         }
 
-        // GET /Reservations/Confirmation/5
+        // GET /Reservations/Confirmation/5?code=RES-XXXX-XXXX
         [HttpGet]
-        public async Task<IActionResult> Confirmation(int id)
+        public async Task<IActionResult> Confirmation(int id, string? code)
         {
             var reservation = await _context.Reservations
                 .Include(r => r.Restaurant)
@@ -201,6 +203,18 @@ namespace SistemaReservas.Controllers
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (reservation == null)
+            {
+                return NotFound();
+            }
+
+            // Protección contra IDOR: exigir código de reserva válido (o sesión autenticada)
+            var tempCode = TempData["ConfirmedReservationCode"] as string;
+            bool isAuthorizedViewer =
+                User.Identity?.IsAuthenticated == true ||
+                (!string.IsNullOrWhiteSpace(code) && string.Equals(code.Trim(), reservation.ReservationCode, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(tempCode) && string.Equals(tempCode, reservation.ReservationCode, StringComparison.OrdinalIgnoreCase));
+
+            if (!isAuthorizedViewer)
             {
                 return NotFound();
             }
@@ -270,6 +284,7 @@ namespace SistemaReservas.Controllers
 
         [HttpGet]
         [Route("api/reservations")]
+        [Authorize(Roles = "Administrador,Gerente / Encargado,Anfitrión / Recepcionista,Mesero / Personal de Sala")]
         public async Task<IActionResult> ApiGetReservations(
             [FromQuery] int? restaurantId,
             [FromQuery] string? status,
@@ -315,6 +330,10 @@ namespace SistemaReservas.Controllers
             if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(email))
                 return BadRequest(new { message = "Se requiere código o correo electrónico" });
 
+            // Si no está autenticado, exigir código exacto de reserva para evitar volcado de PII por correo
+            if (User.Identity?.IsAuthenticated != true && string.IsNullOrWhiteSpace(code))
+                return Unauthorized(new { message = "Se requiere el código de reserva para consultas públicas." });
+
             var query = _context.Reservations
                 .Include(r => r.Restaurant)
                 .Include(r => r.Table)
@@ -322,10 +341,25 @@ namespace SistemaReservas.Controllers
 
             if (!string.IsNullOrWhiteSpace(code))
                 query = query.Where(r => r.ReservationCode == code.Trim().ToUpper());
-            else if (!string.IsNullOrWhiteSpace(email))
+
+            if (!string.IsNullOrWhiteSpace(email))
                 query = query.Where(r => r.CustomerEmail.ToLower() == email.Trim().ToLower());
 
-            var results = await query.OrderByDescending(r => r.ReservationDate).ToListAsync();
+            var results = await query
+                .OrderByDescending(r => r.ReservationDate)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.ReservationCode,
+                    RestaurantName = r.Restaurant != null ? r.Restaurant.Name : null,
+                    TableNumber = r.Table != null ? r.Table.TableNumber : (int?)null,
+                    r.ReservationDate,
+                    r.ReservationTime,
+                    r.PartySize,
+                    r.Status
+                })
+                .ToListAsync();
+
             return Json(results);
         }
     }

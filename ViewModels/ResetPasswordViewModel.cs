@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SistemaReservas.Services;
 
 namespace SistemaReservas.ViewModels
 {
@@ -12,7 +13,7 @@ namespace SistemaReservas.ViewModels
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La nueva contraseña es obligatoria.")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres.")]
+        [StrongPassword]
         [DataType(DataType.Password)]
         [Display(Name = "Nueva contraseña")]
         public string NewPassword { get; set; } = string.Empty;

@@ -74,6 +74,17 @@ namespace SistemaReservas.Controllers
             }
 
             var cleanEmail = model.Email.Trim().ToLowerInvariant();
+            var emailThrottleKey = $"email:{cleanEmail}";
+
+            // Verificar también rate limit por cuenta (protege cuentas administrativas contra ataques distribuidos)
+            var (isEmailBlocked, emailRetryAfter) = _rateLimiter.CheckIpThrottled(emailThrottleKey);
+            if (isEmailBlocked && emailRetryAfter.HasValue)
+            {
+                var minutes = Math.Max(1, (int)Math.Ceiling(emailRetryAfter.Value.TotalMinutes));
+                ModelState.AddModelError("", $"Demasiados intentos fallidos para esta cuenta. Por seguridad, el acceso se encuentra suspendido temporalmente por {minutes} minuto(s).");
+                return View(model);
+            }
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
 
             bool isValid = false;
@@ -85,6 +96,7 @@ namespace SistemaReservas.Controllers
                 // Ejecución criptográfica dummy para que el tiempo de respuesta sea idéntico al de un usuario existente
                 _dummyHasher.VerifyHashedPassword("security_timing_protection@internal.local", _dummyHash, model.Password);
 
+                _rateLimiter.RecordFailedAttempt(emailThrottleKey);
                 var (isNowBlocked, failedCount, remainingAttempts, lockDuration) = _rateLimiter.RecordFailedAttempt(ipAddress);
                 if (isNowBlocked)
                 {
@@ -102,6 +114,7 @@ namespace SistemaReservas.Controllers
             // 3. CAPA DE SEGURIDAD: Cuenta inactiva o bloqueada
             if (!user.IsActive)
             {
+                _dummyHasher.VerifyHashedPassword("security_timing_protection@internal.local", _dummyHash, model.Password);
                 if (user.FailedLoginAttempts >= 5)
                 {
                     ModelState.AddModelError("", "Esta cuenta ha sido bloqueada por seguridad tras exceder el número máximo de intentos fallidos. Comunícate con un administrador.");
@@ -119,9 +132,21 @@ namespace SistemaReservas.Controllers
             {
                 isValid = true;
                 _rateLimiter.ResetAttempts(ipAddress);
+                _rateLimiter.ResetAttempts(emailThrottleKey);
+
+                bool needsSave = false;
+                if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    user.PasswordHash = hasher.HashPassword(cleanEmail, model.Password);
+                    needsSave = true;
+                }
                 if (user.FailedLoginAttempts > 0)
                 {
                     user.FailedLoginAttempts = 0;
+                    needsSave = true;
+                }
+                if (needsSave)
+                {
                     await _context.SaveChangesAsync();
                 }
             }
@@ -129,11 +154,13 @@ namespace SistemaReservas.Controllers
             {
                 // Contraseña incorrecta
                 var (isNowBlocked, failedCount, ipRemaining, lockDuration) = _rateLimiter.RecordFailedAttempt(ipAddress);
+                var (isEmailNowBlocked, _, emailRemaining, emailLockDuration) = _rateLimiter.RecordFailedAttempt(emailThrottleKey);
                 bool isAdministrative = user.Role == "Administrador" || user.Role == "Gerente / Encargado";
 
-                if (isNowBlocked)
+                if (isNowBlocked || isEmailNowBlocked)
                 {
-                    var mins = lockDuration.HasValue ? (int)lockDuration.Value.TotalMinutes : 10;
+                    var effectiveDuration = isNowBlocked ? lockDuration : emailLockDuration;
+                    var mins = effectiveDuration.HasValue ? (int)effectiveDuration.Value.TotalMinutes : 10;
                     ModelState.AddModelError("", $"Has superado el límite de intentos fallidos. Tu acceso ha sido bloqueado temporalmente por {mins} minutos.");
                     return View(model);
                 }
@@ -153,37 +180,16 @@ namespace SistemaReservas.Controllers
                     {
                         await _context.SaveChangesAsync();
                         int accountRemaining = 5 - user.FailedLoginAttempts;
-                        int effectiveRemaining = Math.Min(accountRemaining, ipRemaining);
+                        int effectiveRemaining = Math.Min(accountRemaining, Math.Min(ipRemaining, emailRemaining));
                         ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {effectiveRemaining} intento(s) antes del bloqueo por seguridad.");
                         return View(model);
                     }
                 }
                 else
                 {
-                    // Usuarios administrativos exentos de bloqueo de cuenta
-                    ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {ipRemaining} intento(s) antes del bloqueo por seguridad.");
+                    int effectiveRemaining = Math.Min(ipRemaining, emailRemaining);
+                    ModelState.AddModelError("", $"Credenciales no válidas. Revisa tu correo y contraseña. Te quedan {effectiveRemaining} intento(s) antes del bloqueo temporal por seguridad.");
                     return View(model);
-                }
-            }
-
-            // Fallback de contingencia administrativa garantizado
-            if (!isValid && cleanEmail == "admin@sistemareservas.com" && model.Password == "Admin123!")
-            {
-                isValid = true;
-                _rateLimiter.ResetAttempts(ipAddress);
-                if (user == null)
-                {
-                    user = new User
-                    {
-                        Email = "admin@sistemareservas.com",
-                        FullName = "Administrador General",
-                        Role = "Administrador",
-                        IsActive = true,
-                        PasswordHash = hasher.HashPassword("admin@sistemareservas.com", "Admin123!"),
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
                 }
             }
 
@@ -191,6 +197,21 @@ namespace SistemaReservas.Controllers
             {
                 ModelState.AddModelError("", "Credenciales no válidas. Revisa tu correo y contraseña.");
                 return View(model);
+            }
+
+            // Si la contraseña actual (legacy) no cumple con la nueva política (mín. 8 caracteres y complejidad),
+            // redirigir al cambio obligatorio antes de otorgar acceso al panel.
+            var (meetsPasswordPolicy, _) = PasswordPolicy.Validate(model.Password);
+            if (!meetsPasswordPolicy)
+            {
+                var upgradeBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+                var upgradeToken = Convert.ToHexString(upgradeBytes).ToLowerInvariant();
+                user.ResetToken = PasswordPolicy.HashToken(upgradeToken);
+                user.ResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(15);
+                await _context.SaveChangesAsync();
+
+                TempData["UpgradeNotice"] = "Por seguridad, tu contraseña actual no cumple con la nueva política (mínimo 8 caracteres, mayúscula, minúscula, número y símbolo). Actualízala ahora para ingresar.";
+                return RedirectToAction(nameof(ResetPassword), new { token = upgradeToken, email = user.Email });
             }
 
             // Crear los Claims de autenticación
@@ -255,16 +276,27 @@ namespace SistemaReservas.Controllers
                 return View(model);
             }
 
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            var forgotKey = $"forgot:{ipAddress}";
+            var (isThrottled, retryAfter) = _rateLimiter.CheckIpThrottled(forgotKey);
+            if (isThrottled && retryAfter.HasValue)
+            {
+                var mins = Math.Max(1, (int)Math.Ceiling(retryAfter.Value.TotalMinutes));
+                ModelState.AddModelError("", $"Has realizado demasiadas solicitudes de recuperación. Intenta nuevamente en {mins} minuto(s).");
+                return View(model);
+            }
+            _rateLimiter.RecordFailedAttempt(forgotKey);
+
             var cleanEmail = model.Email.Trim().ToLowerInvariant();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
 
             if (user != null && user.IsActive)
             {
-                // Generar token único criptográficamente seguro
+                // Generar token único criptográficamente seguro y almacenar solo su hash SHA-256 en BD
                 var tokenBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
                 var token = Convert.ToHexString(tokenBytes).ToLowerInvariant();
 
-                user.ResetToken = token;
+                user.ResetToken = PasswordPolicy.HashToken(token);
                 user.ResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30);
                 await _context.SaveChangesAsync();
 
@@ -300,9 +332,11 @@ namespace SistemaReservas.Controllers
                 return View(new ResetPasswordViewModel());
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == token);
+            var tokenHash = PasswordPolicy.HashToken(token.Trim());
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == tokenHash && u.IsActive);
 
-            if (user == null || user.ResetTokenExpiresAt == null || user.ResetTokenExpiresAt < DateTime.UtcNow)
+            if (user == null || user.ResetTokenExpiresAt == null || user.ResetTokenExpiresAt < DateTime.UtcNow ||
+                (!string.IsNullOrWhiteSpace(email) && !string.Equals(user.Email, email.Trim(), StringComparison.OrdinalIgnoreCase)))
             {
                 ViewBag.InvalidToken = true;
                 ViewBag.ErrorMessage = "El enlace de recuperación ha expirado o ya ha sido utilizado. Por favor solicita uno nuevo.";
@@ -326,7 +360,9 @@ namespace SistemaReservas.Controllers
                 return View(model);
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == model.Token);
+            var tokenHash = PasswordPolicy.HashToken(model.Token.Trim());
+            var cleanEmail = model.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == tokenHash && u.Email.ToLower() == cleanEmail && u.IsActive);
 
             if (user == null || user.ResetTokenExpiresAt == null || user.ResetTokenExpiresAt < DateTime.UtcNow)
             {
@@ -336,11 +372,13 @@ namespace SistemaReservas.Controllers
             }
 
             var hasher = new PasswordHasher<string>();
-            user.PasswordHash = hasher.HashPassword(user.Email, model.NewPassword);
+            user.PasswordHash = hasher.HashPassword(cleanEmail, model.NewPassword);
             user.ResetToken = null;
             user.ResetTokenExpiresAt = null;
+            user.FailedLoginAttempts = 0;
 
             await _context.SaveChangesAsync();
+            _rateLimiter.ResetAttempts($"email:{cleanEmail}");
 
             _logger.LogInformation("Contraseña actualizada exitosamente para el usuario {Email}", user.Email);
             TempData["SuccessMessage"] = "Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión con tu nueva clave.";
@@ -348,9 +386,9 @@ namespace SistemaReservas.Controllers
             return RedirectToAction(nameof(Login));
         }
 
-        // GET /Account/Logout o POST /Account/Logout
-        [HttpGet]
+        // POST /Account/Logout
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
